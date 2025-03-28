@@ -10,7 +10,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: sv-sm-tg-bot
   IMAGE_ID: ghcr.io/tialexsey/sv-sm-tg-bot
-  IMAGE_VERSION: Abaddon
+  IMAGE_VERSION: Alchemist
 
 jobs:
   build-and-push:
