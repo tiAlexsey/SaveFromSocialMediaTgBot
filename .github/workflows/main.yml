@@ -1,0 +1,77 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+    - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: sv-sm-tg-bot
+  IMAGE_ID: ghcr.io/tialexsey/sv-sm-tg-bot
+  IMAGE_VERSION: Abaddon
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK 9.0
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore & Publish .NET app
+        run: |
+          dotnet restore SaveFromSocialMediaTgBot/SaveFromSocialMediaTgBot.csproj
+          dotnet publish SaveFromSocialMediaTgBot/SaveFromSocialMediaTgBot.csproj -c Release -o ./publish /p:UseAppHost=false
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.IMAGE_NAME }}:${{ env.IMAGE_VERSION }} -f SaveFromSocialMediaTgBot/Dockerfile .
+
+      - name: Log into GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker image to GitHub Packages
+        run: |
+          docker tag ${{ env.IMAGE_NAME}}:${{ env.IMAGE_VERSION }} ${{ env.IMAGE_ID }}:${{ env.IMAGE_VERSION }}
+          docker push ${{ env.IMAGE_ID }}:${{ env.IMAGE_VERSION }}
+
+      - name: Cleanup local images
+        run: docker image prune -f
+
+  deploy-on-server:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          password: ${{ secrets.SERVER_PASS }}
+          script: |
+            echo "${{ secrets.SERVER_PASS }}" | sudo -S docker stop sv-sm-tg-bot || true
+            echo "${{ secrets.SERVER_PASS }}" | sudo -S docker rm sv-sm-tg-bot || true
+            echo "${{ secrets.SERVER_PASS }}" | sudo -S docker image prune -a -f
+            echo "${{ secrets.SERVER_PASS }}" | sudo -S docker run --pull=always -d \
+              --name sv-sm-tg-bot \
+              -p 57049:57100 \
+              -p 57249:57300 \
+              -e TOKEN="${{ secrets.TOKEN }}" \
+              -e TWITTER_TOKEN="${{ secrets.TWITTER_TOKEN }}" \
+              -e BOT_NAME="${{ secrets.BOT_NAME }}" \
+              ${{ env.IMAGE_ID }}:${{ env.IMAGE_VERSION }}
