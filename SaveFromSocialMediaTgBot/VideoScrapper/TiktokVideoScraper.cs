@@ -15,9 +15,11 @@ public class TiktokVideoScraper
         var handler = new HttpClientHandler
         {
             CookieContainer = cookieContainer,
-            UseCookies = true
+            UseCookies = true,
+            AllowAutoRedirect = true
         };
         using var httpClient = new HttpClient(handler);
+        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
 
         var linkVideo = await GetContentLink(httpClient, pageUrl);
 
