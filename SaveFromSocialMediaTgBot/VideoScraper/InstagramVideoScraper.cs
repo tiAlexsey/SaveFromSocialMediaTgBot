@@ -9,12 +9,6 @@ public class InstagramVideoScraper
 {
     private readonly Regex _pattern = new(@"""https:\S+\.mp4\S+""", RegexOptions.Compiled);
     private readonly DeviceDescriptor _device = Puppeteer.Devices[DeviceDescriptorName.IPhone4];
-    private readonly int _retryCount;
-
-    public InstagramVideoScraper(IConfiguration configuration)
-    {
-        _retryCount = int.TryParse(configuration["RETRY_COUNT"], out var retryCount) ? retryCount : 1;
-    }
 
     private readonly LaunchOptions _launchOptions = new()
     {
@@ -43,6 +37,9 @@ public class InstagramVideoScraper
         await using var page = await browser.NewPageAsync();
         // Эмулируем мобильное устройство
         await page.EmulateAsync(_device);
+        await page.SetUserAgentAsync(
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1");
+        await page.EvaluateFunctionAsync(@"() => {Object.defineProperty(navigator, 'webdriver', { get: () => false });}");
         // Переходим по URL
         await page.GoToAsync(pageUrl, WaitUntilNavigation.Networkidle0);
         // develop
