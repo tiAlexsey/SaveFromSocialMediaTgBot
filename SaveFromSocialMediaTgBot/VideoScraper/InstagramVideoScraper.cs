@@ -25,21 +25,13 @@ public class InstagramVideoScraper
 
     public async Task<string> GetVideoUrlAsync(string pageUrl)
     {
-        string? result = null;
-        var i = 0;
-        while (i < _retryCount && result is null)
-        {
-            result = await TryGetVideoUrlAsync(pageUrl);
-
-            i++;
-        }
+        var result = await TryGetVideoUrlAsync(pageUrl);
 
         if (result == null)
         {
             throw new FormatException(Messages.ERROR_EMPTY_URL);
         }
 
-        Console.WriteLine("got link in {0} attemps", i);
         return result;
     }
 
@@ -47,14 +39,21 @@ public class InstagramVideoScraper
     {
         // Запускаем браузер в headless-режиме
         await using var browser = await Puppeteer.LaunchAsync(_launchOptions);
+        // Открываем новую страницу в браузере
         await using var page = await browser.NewPageAsync();
-
-        await page.SetUserAgentAsync("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36");
+        // Эмулируем мобильное устройство
         await page.EmulateAsync(_device);
-
         // Переходим по URL
+        await page.GoToAsync(pageUrl);
+        // develop
+        await page.ScreenshotAsync($"{pageUrl.Replace(":", "")}.png");
+        // Ждем окно авторизации
+        await page.WaitForSelectorAsync("div[role='button']");
+        // Закрываем окно
+        await page.ClickAsync("div[role='button']");
+        // Перезагружаем страницу с видео
         await page.GoToAsync(pageUrl, WaitUntilNavigation.Networkidle0);
-
+        // Выкачиваем html страницу
         var content = await page.GetContentAsync();
         // Закрываем браузер
         await browser.CloseAsync();
