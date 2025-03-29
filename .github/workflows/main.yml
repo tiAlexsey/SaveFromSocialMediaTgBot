@@ -74,4 +74,5 @@ jobs:
               -e TOKEN="${{ secrets.TOKEN }}" \
               -e TWITTER_TOKEN="${{ secrets.TWITTER_TOKEN }}" \
               -e BOT_NAME="${{ secrets.BOT_NAME }}" \
+              -e RETRY_COUNT="${{ secrets.RETRY_COUNT }}" \
               ${{ env.IMAGE_ID }}:${{ env.IMAGE_VERSION }}
