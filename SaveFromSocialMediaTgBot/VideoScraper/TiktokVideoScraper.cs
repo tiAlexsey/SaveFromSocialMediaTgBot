@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.RegularExpressions;
 
-namespace SaveFromSocialMediaTgBot.VideoScrapper;
+namespace SaveFromSocialMediaTgBot.VideoScraper;
 
 public class TiktokVideoScraper
 {

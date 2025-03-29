@@ -2,7 +2,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace SaveFromSocialMediaTgBot.VideoScrapper;
+namespace SaveFromSocialMediaTgBot.VideoScraper;
 
 public class TwitterVideoScraper
 {

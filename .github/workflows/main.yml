@@ -8,8 +8,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: sv-sm-tg-bot
-  IMAGE_ID: ghcr.io/tialexsey/sv-sm-tg-bot
+  IMAGE_NAME: save-video-tg-bot
+  IMAGE_ID: ghcr.io/tialexsey/save-video-tg-bot
   IMAGE_VERSION: Alchemist
 
 jobs:
@@ -64,11 +64,11 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           password: ${{ secrets.SERVER_PASS }}
           script: |
-            echo "${{ secrets.SERVER_PASS }}" | sudo -S docker stop sv-sm-tg-bot || true
-            echo "${{ secrets.SERVER_PASS }}" | sudo -S docker rm sv-sm-tg-bot || true
+            echo "${{ secrets.SERVER_PASS }}" | sudo -S docker stop ${{ env.IMAGE_NAME }} || true
+            echo "${{ secrets.SERVER_PASS }}" | sudo -S docker rm ${{ env.IMAGE_NAME }} || true
             echo "${{ secrets.SERVER_PASS }}" | sudo -S docker image prune -a -f
             echo "${{ secrets.SERVER_PASS }}" | sudo -S docker run --pull=always -d \
-              --name sv-sm-tg-bot \
+              --name ${{ env.IMAGE_NAME }} \
               -p 57049:57100 \
               -p 57249:57300 \
               -e TOKEN="${{ secrets.TOKEN }}" \

@@ -1,21 +1,18 @@
-using SaveFromSocialMediaTgBot.VideoScrapper;
+using SaveFromSocialMediaTgBot.VideoScraper;
 
 namespace SaveFromSocialMediaTgBot.Services;
 
 public class ScraperService
 {
-    private readonly ILogger<ScraperService> _logger;
     private readonly InstagramVideoScraper _instagramScraper;
     private readonly TiktokVideoScraper _tiktokScraper;
     private readonly TwitterVideoScraper _twitterScraper;
 
     public ScraperService(
-        ILogger<ScraperService> logger,
         InstagramVideoScraper instagramScraper,
         TiktokVideoScraper tiktokScraper,
         TwitterVideoScraper twitterScraper)
     {
-        _logger = logger;
         _instagramScraper = instagramScraper;
         _tiktokScraper = tiktokScraper;
         _twitterScraper = twitterScraper;

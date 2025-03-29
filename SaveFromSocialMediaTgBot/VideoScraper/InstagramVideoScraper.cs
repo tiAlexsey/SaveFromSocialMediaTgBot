@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 using PuppeteerSharp;
 using PuppeteerSharp.Mobile;
 
-namespace SaveFromSocialMediaTgBot.VideoScrapper;
+namespace SaveFromSocialMediaTgBot.VideoScraper;
 
 public class InstagramVideoScraper
 {

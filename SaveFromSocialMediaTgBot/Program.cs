@@ -1,13 +1,9 @@
 using SaveFromSocialMediaTgBot.Extensions;
-using SaveFromSocialMediaTgBot.Workers;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Configuration.AddEnvironmentVariables();
-
+builder.Configuration.AddConfigs();
 builder.Services.AddServices();
-
-builder.Services.AddHostedService<TelegramBotWorker>();
 
 var host = builder.Build();
 host.Run();
