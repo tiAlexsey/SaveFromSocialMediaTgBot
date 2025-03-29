@@ -2,22 +2,11 @@ using SaveFromSocialMediaTgBot.VideoScraper;
 
 namespace SaveFromSocialMediaTgBot.Services;
 
-public class ScraperService
+public class ScraperService(
+    InstagramVideoScraper instagramScraper,
+    TiktokVideoScraper tiktokScraper,
+    TwitterVideoScraper twitterScraper)
 {
-    private readonly InstagramVideoScraper _instagramScraper;
-    private readonly TiktokVideoScraper _tiktokScraper;
-    private readonly TwitterVideoScraper _twitterScraper;
-
-    public ScraperService(
-        InstagramVideoScraper instagramScraper,
-        TiktokVideoScraper tiktokScraper,
-        TwitterVideoScraper twitterScraper)
-    {
-        _instagramScraper = instagramScraper;
-        _tiktokScraper = tiktokScraper;
-        _twitterScraper = twitterScraper;
-    }
-
     public async Task<Stream> GetUrlVideoAsync(string url)
     {
         return url switch
@@ -31,18 +20,20 @@ public class ScraperService
 
     private async Task<Stream> GetVideoFromInstAsync(string url)
     {
-        return await _instagramScraper.GetVideoStreamAsync(url);
+        var videoUrl = await instagramScraper.GetVideoUrlAsync(url);
+        HttpClient client = new();
+        return await client.GetStreamAsync(videoUrl);
     }
 
     private async Task<Stream> GetVideoFromTiktokAsync(string url)
     {
-        return await _tiktokScraper.GetVideoStreamAsync(url);
+        return await tiktokScraper.GetVideoStreamAsync(url);
     }
 
     private async Task<Stream> GetVideoFromTwitterAsync(string url)
     {
-        var postId = _twitterScraper.GetPostId(url);
-        var videoUrl = (await _twitterScraper.GetVideoUrlsAsync(postId)).FirstOrDefault();
+        var postId = twitterScraper.GetPostId(url);
+        var videoUrl = (await twitterScraper.GetVideoUrlsAsync(postId)).FirstOrDefault();
         HttpClient httpClient = new();
         return await httpClient.GetStreamAsync(videoUrl);
     }

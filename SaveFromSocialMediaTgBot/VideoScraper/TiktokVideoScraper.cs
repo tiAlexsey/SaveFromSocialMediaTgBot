@@ -1,14 +1,21 @@
 using System.Net;
 using System.Text.RegularExpressions;
+using SaveFromSocialMediaTgBot.Data.Const;
 
 namespace SaveFromSocialMediaTgBot.VideoScraper;
 
 public class TiktokVideoScraper
 {
+    private readonly int _retryCount;
     private readonly Regex _pattern = new(
         @"https?:\\u002F\\u002F[^""'\s]*?mime_type=video_mp4[^""'\s]*?tt_chain_token",
         RegexOptions.Compiled);
 
+    public TiktokVideoScraper(IConfiguration configuration)
+    {
+        _retryCount = int.TryParse(configuration["RETRY_COUNT"], out var retryCount) ? retryCount : 1;
+    }
+    
     public async Task<Stream> GetVideoStreamAsync(string pageUrl)
     {
         var cookieContainer = new CookieContainer();
@@ -21,18 +28,18 @@ public class TiktokVideoScraper
         using var httpClient = new HttpClient(handler);
         httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
 
-        var linkVideo = await GetContentLink(httpClient, pageUrl);
+        var linkVideo = await GetVideoLinkAsync(httpClient, pageUrl);
 
-        if (linkVideo is null) throw new FormatException("Invalid page URL");
+        if (linkVideo is null) throw new FormatException(Messages.ERROR_EMPTY_URL);
 
         return await httpClient.GetStreamAsync(linkVideo);
     }
 
-    private async Task<string?> GetContentLink(HttpClient httpClient, string pageUrl)
+    private async Task<string?> GetVideoLinkAsync(HttpClient httpClient, string pageUrl)
     {
         string result = null;
         var i = 0;
-        while (i < 3 && result is null)
+        while (i < _retryCount && result is null)
         {
             var response = await httpClient.GetAsync(pageUrl);
             response.EnsureSuccessStatusCode();

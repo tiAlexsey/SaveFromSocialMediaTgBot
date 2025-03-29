@@ -8,7 +8,8 @@
         "DOTNET_ENVIRONMENT": "Development",
         "TOKEN": "",
         "BOT_NAME": "",
-        "TWITTER_TOKEN": ""
+        "TWITTER_TOKEN": "",
+        "RETRY_COUNT": ""
       }
     }
   }

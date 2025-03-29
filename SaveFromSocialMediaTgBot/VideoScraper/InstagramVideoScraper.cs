@@ -1,51 +1,53 @@
 using System.Text.RegularExpressions;
 using PuppeteerSharp;
 using PuppeteerSharp.Mobile;
+using SaveFromSocialMediaTgBot.Data.Const;
 
 namespace SaveFromSocialMediaTgBot.VideoScraper;
 
 public class InstagramVideoScraper
 {
     private readonly Regex _pattern = new(@"""https:\S+\.mp4\S+""", RegexOptions.Compiled);
+    private readonly DeviceDescriptor _device = Puppeteer.Devices[DeviceDescriptorName.IPhone4];
+    private readonly int _retryCount;
 
-    private readonly DeviceDescriptor
-        _device = Puppeteer.Devices[DeviceDescriptorName.IPhone4]; // Эмулируем мобильный девайс
+    public InstagramVideoScraper(IConfiguration configuration)
+    {
+        _retryCount = int.TryParse(configuration["RETRY_COUNT"], out var retryCount) ? retryCount : 1;
+    }
 
-    private readonly LaunchOptions _launchOptions = new() // Указываем нативный путь к Chromium для ARM64
+    private readonly LaunchOptions _launchOptions = new()
     {
         Headless = true,
-        ExecutablePath = "/usr/bin/chromium", // проверьте, что Chromium установлен по этому пути
+        ExecutablePath = "/usr/bin/chromium",
         Args = ["--disable-gpu", "--no-sandbox", "--disable-setuid-sandbox"]
     };
 
-    public async Task<Stream> GetVideoStreamAsync(string pageUrl)
+    public async Task<string> GetVideoUrlAsync(string pageUrl)
     {
-        var content = await GetContentAsync(pageUrl);
-        string link;
+        string? result = null;
+        var i = 0;
+        while (i < _retryCount && result is null)
+        {
+            result = await TryGetVideoUrlAsync(pageUrl);
 
-        // Находим ссылку на видео
-        var match = _pattern.Match(content);
-        if (match.Success)
-        {
-            link = match.Value.Trim('"')
-                .Replace("amp;", "")
-                .Replace("\\", "");
-        }
-        else
-        {
-            throw new FormatException("Invalid page URL");
+            i++;
         }
 
+        if (result == null)
+        {
+            throw new FormatException(Messages.ERROR_EMPTY_URL);
+        }
 
-        HttpClient client = new();
-        return await client.GetStreamAsync(link);
+        Console.WriteLine("got link in {0} attemps", i);
+        return result;
     }
 
-    private async Task<string> GetContentAsync(string pageUrl)
+    private async Task<string?> TryGetVideoUrlAsync(string pageUrl)
     {
         // Запускаем браузер в headless-режиме
-        using var browser = await Puppeteer.LaunchAsync(_launchOptions);
-        using var page = await browser.NewPageAsync();
+        await using var browser = await Puppeteer.LaunchAsync(_launchOptions);
+        await using var page = await browser.NewPageAsync();
 
         await page.EmulateAsync(_device);
 
@@ -56,6 +58,15 @@ public class InstagramVideoScraper
         // Закрываем браузер
         await browser.CloseAsync();
 
-        return content;
+        var match = _pattern.Match(content);
+        if (match.Success)
+        {
+            return match.Value
+                .Trim('"')
+                .Replace("amp;", "")
+                .Replace("\\", "");
+        }
+
+        return null;
     }
 }

@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using SaveFromSocialMediaTgBot.Data.Const;
 
 namespace SaveFromSocialMediaTgBot.VideoScraper;
 
@@ -94,7 +95,7 @@ public class TwitterVideoScraper
     {
         var match = _twRegex.Match(url);
         if (!match.Success)
-            throw new ArgumentException("Invalid Twitter URL.");
+            throw new FormatException(Messages.ERROR_EMPTY_URL);
         return match.Groups[1].Value;
     }
 
