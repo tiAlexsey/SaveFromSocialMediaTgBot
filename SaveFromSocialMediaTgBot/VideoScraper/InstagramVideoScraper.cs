@@ -46,7 +46,8 @@ public class InstagramVideoScraper
         // Переходим по URL
         await page.GoToAsync(pageUrl);
         // develop
-        await page.ScreenshotAsync($"{pageUrl.Replace(":", "")}.png");
+        var fileName = $"Screenshot-{Regex.Match(pageUrl, "igsh=[^&]+")}.png";
+        await page.ScreenshotAsync(fileName);
         // Ждем окно авторизации
         await page.WaitForSelectorAsync("div[role='button']");
         // Закрываем окно
