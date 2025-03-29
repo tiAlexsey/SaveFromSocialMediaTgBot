@@ -44,7 +44,7 @@ public class InstagramVideoScraper
         // Эмулируем мобильное устройство
         await page.EmulateAsync(_device);
         // Переходим по URL
-        await page.GoToAsync(pageUrl);
+        await page.GoToAsync(pageUrl, WaitUntilNavigation.Networkidle0);
         // develop
         var fileName = $"Screenshot-{Regex.Match(pageUrl, "igsh=[^&]+")}.png";
         Console.WriteLine(fileName);
