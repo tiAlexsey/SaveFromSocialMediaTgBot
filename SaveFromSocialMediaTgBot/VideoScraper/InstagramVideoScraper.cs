@@ -14,7 +14,7 @@ public class InstagramVideoScraper
     {
         Headless = true,
         ExecutablePath = "/usr/bin/chromium",
-        Args = ["--disable-gpu", "--no-sandbox", "--disable-setuid-sandbox"]
+        Args = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
     };
 
     public async Task<string> GetVideoUrlAsync(string pageUrl)
@@ -37,11 +37,13 @@ public class InstagramVideoScraper
         await using var page = await browser.NewPageAsync();
         // Эмулируем мобильное устройство
         await page.EmulateAsync(_device);
-        await page.SetUserAgentAsync(
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1");
         await page.EvaluateFunctionAsync(@"() => {Object.defineProperty(navigator, 'webdriver', { get: () => false });}");
         // Переходим по URL
-        await page.GoToAsync(pageUrl, WaitUntilNavigation.Networkidle0);
+        await page.GoToAsync(pageUrl, new NavigationOptions
+        {
+            WaitUntil = new[] { WaitUntilNavigation.Networkidle2 },
+        });
+        
         // develop
         var fileName = $"Screenshot-{Regex.Match(pageUrl, "igsh=[^&]+")}.png";
         Console.WriteLine(fileName);
@@ -50,6 +52,7 @@ public class InstagramVideoScraper
         await page.WaitForSelectorAsync("div[role='button']");
         // Закрываем окно
         await page.ClickAsync("div[role='button']");
+        await Task.Delay(3210);
         // Перезагружаем страницу с видео
         await page.GoToAsync(pageUrl, WaitUntilNavigation.Networkidle0);
         // Выкачиваем html страницу
