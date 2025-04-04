@@ -59,6 +59,7 @@ public class TelegramBotWorker : BackgroundService
                     {
                         if (IsBootMention(messageEntities))
                         {
+                            await SendReactionAsync(botClient, message.Chat.Id, message.Id, "\ud83d\udc40");
                             await ProcessMessageAsync(botClient, message.Chat.Id, link, cancellationToken);
                         }
 
@@ -66,15 +67,20 @@ public class TelegramBotWorker : BackgroundService
                     }
                     case ChatType.Private:
                     {
+                        await SendReactionAsync(botClient, message.Chat.Id, message.Id, "\ud83d\udc40");
                         await ProcessMessageAsync(botClient, message.Chat.Id, link, cancellationToken);
                         break;
                     }
+                    default:
+                        return;
                 }
+                await SendReactionAsync(botClient, update.Message.Chat.Id, update.Message.Id, "\ud83d\udcaf");
             }
         }
         catch (Exception ex)
         {
             var message = $"я обкакался, вот ошибка: {ex.Message}";
+            await SendReactionAsync(botClient, update.Message.Chat.Id, update.Message.Id, "\ud83d\udca9");
             await SendMessageAsync(botClient, update.Message.Chat.Id, message, cancellationToken);
         }
     }
@@ -93,10 +99,14 @@ public class TelegramBotWorker : BackgroundService
         await SendVideoMessageAsync(botClient, chatId, videoStream, cancellationToken);
     }
 
+    private async Task SendReactionAsync(ITelegramBotClient botClient, long chatId, int messageId, ReactionType reactionType)
+    {
+        await botClient.SetMessageReaction(chatId, messageId, new[] { reactionType });
+    }
     private async Task SendMessageAsync(ITelegramBotClient botClient, long chatId, string text,
         CancellationToken cancellationToken)
     {
-        await botClient.SendTextMessageAsync(chatId: chatId, text: text, cancellationToken: cancellationToken);
+        await botClient.SendMessage(chatId: chatId, text: text, cancellationToken: cancellationToken);
     }
 
     private async Task SendVideoMessageAsync(ITelegramBotClient botClient, long chatId, Stream videoStream,
