@@ -1,14 +1,15 @@
-using System.Text.RegularExpressions;
 using PuppeteerSharp;
-using PuppeteerSharp.Mobile;
 using SaveFromSocialMediaTgBot.Data.Const;
+using SaveFromSocialMediaTgBot.Services;
+using System.Text.RegularExpressions;
 
 namespace SaveFromSocialMediaTgBot.VideoScraper;
 
 public class InstagramVideoScraper
 {
-    private readonly Regex _pattern = new(@"""https:\S+\.mp4\S+""", RegexOptions.Compiled);
-    private readonly DeviceDescriptor _device = Puppeteer.Devices[DeviceDescriptorName.IPhone4];
+    private readonly string _login;
+    private readonly string _password;
+    private readonly Regex _pattern = new(@"""https:\S+?\.mp4\S+?""", RegexOptions.Compiled);
 
     private readonly LaunchOptions _launchOptions = new()
     {
@@ -16,6 +17,12 @@ public class InstagramVideoScraper
         ExecutablePath = "/usr/bin/chromium",
         Args = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
     };
+
+    public InstagramVideoScraper(IConfiguration configuration)
+    {
+        _login = configuration["INSTA_LOGIN"];
+        _password = configuration["INSTA_PASSWORD"];
+    }
 
     public async Task<string> GetVideoUrlAsync(string pageUrl)
     {
@@ -35,37 +42,39 @@ public class InstagramVideoScraper
         await using var browser = await Puppeteer.LaunchAsync(_launchOptions);
         // Открываем новую страницу в браузере
         await using var page = await browser.NewPageAsync();
-        // Эмулируем мобильное устройство
-        await page.EmulateAsync(_device);
-        await page.EvaluateFunctionAsync(@"() => {Object.defineProperty(navigator, 'webdriver', { get: () => false });}");
-        // Переходим по URL
-        await page.GoToAsync(pageUrl, new NavigationOptions
-        {
-            WaitUntil = new[] { WaitUntilNavigation.Networkidle2 },
-        });
-        
-        // develop
-        var fileName = $"Screenshot-{Regex.Match(pageUrl, "igsh=[^&]+")}.png";
-        Console.WriteLine(fileName);
-        await page.ScreenshotAsync(fileName);
-        // Ждем окно авторизации
-        await page.WaitForSelectorAsync("div[role='button']");
-        // Закрываем окно
-        await page.ClickAsync("div[role='button']");
-        await Task.Delay(3210);
-        // Перезагружаем страницу с видео
-        await page.GoToAsync(pageUrl, WaitUntilNavigation.Networkidle0);
-        // Выкачиваем html страницу
-        var content = await page.GetContentAsync();
-        // Закрываем браузер
-        await browser.CloseAsync();
 
-        var match = _pattern.Match(content);
+        await page.SetCookieAsync(InstagramAuthService.Cookies);
+        var tryCount = 0;
+
+        Match? match = null;
+        while (tryCount++ <= 1)
+        {
+            // Переходим по URL
+            await page.GoToAsync(pageUrl, WaitUntilNavigation.Networkidle0);
+            // develop
+            var fileName = $"Screenshot-{Regex.Match(pageUrl, "igsh=[^&]+")}.png";
+            Console.WriteLine(fileName);
+            await page.ScreenshotAsync(fileName);
+            // Выкачиваем html страницу
+            var content = await page.GetContentAsync();
+            // Закрываем браузер
+            await browser.CloseAsync();
+
+            match = _pattern.Match(content);
+            if (!match.Success)
+            {
+                await page.SetCookieAsync(await InstagramAuthService.UpdateCookies(_login, _password));
+            }
+            else
+            {
+                tryCount++;
+            }
+        }
+
         if (match.Success)
         {
             return match.Value
                 .Trim('"')
-                .Replace("amp;", "")
                 .Replace("\\", "");
         }
 

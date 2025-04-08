@@ -4,16 +4,13 @@ WORKDIR /app
 # Обновляем список пакетов и устанавливаем Chromium для ARM64
 RUN apt-get update && apt-get install -y chromium
 
-# Аргументы для сборки
-ARG TOKEN
-ARG BOT_NAME
-ARG TWITTER_TOKEN
-ARG RETRY_COUNT
-
+# Секретные переменные из GitHub
 ENV TOKEN=${TOKEN}
 ENV BOT_NAME=${BOT_NAME}
 ENV TWITTER_TOKEN=${TWITTER_TOKEN}
 ENV RETRY_COUNT=${RETRY_COUNT}
+ENV INST_LOGIN=${INST_LOGIN}
+ENV INST_PASSWORD=${INST_PASSWORD}
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
