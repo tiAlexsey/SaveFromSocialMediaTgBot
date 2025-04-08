@@ -10,7 +10,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: save-video-tg-bot
   IMAGE_ID: ghcr.io/tialexsey/save-video-tg-bot
-  IMAGE_VERSION: AncientApparition
+  IMAGE_VERSION: Anti-mage
 
 jobs:
   build-and-push:

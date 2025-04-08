@@ -20,8 +20,8 @@ public class InstagramVideoScraper
 
     public InstagramVideoScraper(IConfiguration configuration)
     {
-        _login = configuration["INSTA_LOGIN"];
-        _password = configuration["INSTA_PASSWORD"];
+        _login = configuration["INST_LOGIN"];
+        _password = configuration["INST_PASSWORD"];
     }
 
     public async Task<string> GetVideoUrlAsync(string pageUrl)
@@ -57,8 +57,6 @@ public class InstagramVideoScraper
             await page.ScreenshotAsync(fileName);
             // Выкачиваем html страницу
             var content = await page.GetContentAsync();
-            // Закрываем браузер
-            await browser.CloseAsync();
 
             match = _pattern.Match(content);
             if (!match.Success)
@@ -70,6 +68,9 @@ public class InstagramVideoScraper
                 tryCount++;
             }
         }
+        
+        // Закрываем браузер
+        await browser.CloseAsync();
 
         if (match.Success)
         {

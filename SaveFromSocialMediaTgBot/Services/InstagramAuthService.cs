@@ -32,7 +32,9 @@ public static class InstagramAuthService
         // Нажатие кнопки входа
         await page.ClickAsync("button[type='submit']");
 
-        Cookies = await page.GetCookiesAsync();
+        using var page2 = await browser.NewPageAsync();
+        await page2.GoToAsync("https://www.instagram.com/", WaitUntilNavigation.Networkidle0);
+        Cookies = await page2.GetCookiesAsync();
         return Cookies;
     }
 }
