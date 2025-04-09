@@ -31,6 +31,8 @@ public static class InstagramAuthService
 
         // Нажатие кнопки входа
         await page.ClickAsync("button[type='submit']");
+        // Ждем авторизацию
+        await Task.Delay(10000);
 
         using var page2 = await browser.NewPageAsync();
         await page2.GoToAsync("https://www.instagram.com/", WaitUntilNavigation.Networkidle0);
