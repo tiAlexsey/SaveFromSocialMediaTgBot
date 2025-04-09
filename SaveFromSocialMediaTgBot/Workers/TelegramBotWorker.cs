@@ -59,30 +59,35 @@ public class TelegramBotWorker : BackgroundService
                     {
                         if (IsBootMention(messageEntities))
                         {
-                            await SendReactionAsync(botClient, message.Chat.Id, message.Id, "\ud83d\udc40");
-                            await ProcessMessageAsync(botClient, message.Chat.Id, link, cancellationToken);
+                            await StartBotWorkflowAsync(botClient, message, link, cancellationToken);
                         }
-
                         break;
                     }
                     case ChatType.Private:
                     {
-                        await SendReactionAsync(botClient, message.Chat.Id, message.Id, "\ud83d\udc40");
-                        await ProcessMessageAsync(botClient, message.Chat.Id, link, cancellationToken);
+                        await StartBotWorkflowAsync(botClient, message, link, cancellationToken);
                         break;
                     }
                     default:
                         return;
                 }
-                await SendReactionAsync(botClient, update.Message.Chat.Id, update.Message.Id, "\ud83d\udcaf");
+                
             }
         }
         catch (Exception ex)
         {
-            var message = $"я обкакался, вот ошибка: {ex.Message}";
+            // временно отключено
+            //var message = $"я обкакался, вот ошибка: {ex.Message}";
+            //await SendMessageAsync(botClient, update.Message.Chat.Id, message, cancellationToken);
             await SendReactionAsync(botClient, update.Message.Chat.Id, update.Message.Id, "\ud83d\udca9");
-            await SendMessageAsync(botClient, update.Message.Chat.Id, message, cancellationToken);
         }
+    }
+
+    private async Task StartBotWorkflowAsync(ITelegramBotClient botClient, Message message, string link, CancellationToken cancellationToken)
+    {
+        await SendReactionAsync(botClient, message.Chat.Id, message.Id, "\ud83d\udc40");
+        await ProcessMessageAsync(botClient, message.Chat.Id, link, cancellationToken);
+        await SendReactionAsync(botClient, message.Chat.Id, message.Id, "\ud83d\udcaf");
     }
 
     private Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception,
