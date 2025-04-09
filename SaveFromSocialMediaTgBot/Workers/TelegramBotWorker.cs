@@ -109,6 +109,7 @@ public class TelegramBotWorker : BackgroundService
     {
         await botClient.SetMessageReaction(chatId, messageId, new[] { reactionType });
     }
+    
     private async Task SendMessageAsync(ITelegramBotClient botClient, long chatId, string text,
         CancellationToken cancellationToken)
     {

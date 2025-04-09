@@ -14,6 +14,7 @@ public static partial class DependencyInjections
         services.AddTransient<InstagramVideoScraper>();
         services.AddTransient<TiktokVideoScraper>();
         services.AddTransient<TwitterVideoScraper>();
+        services.AddTransient<YoutubeVideoScraper>();
         services.AddTransient<ScraperService>();
 
         services.AddHostedService<TelegramBotWorker>();
