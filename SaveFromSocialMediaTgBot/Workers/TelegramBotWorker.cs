@@ -77,7 +77,8 @@ public class TelegramBotWorker : BackgroundService
         catch (Exception ex)
         {
             // временно отключено
-            //var message = $"я обкакался, вот ошибка: {ex.Message}";
+            var message = $"я обкакался, вот ошибка: {ex.Message}";
+            Console.WriteLine(message + "\n" + ex.Message + ex);
             //await SendMessageAsync(botClient, update.Message.Chat.Id, message, cancellationToken);
             await SendReactionAsync(botClient, update.Message.Chat.Id, update.Message.Id, "\ud83d\udca9");
         }
