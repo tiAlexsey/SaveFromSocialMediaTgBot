@@ -47,11 +47,16 @@ public class YoutubeVideoScraper
         using var doc = JsonDocument.Parse(responseBody);
         var root = doc.RootElement;
 
-        return root
-            .GetProperty("streamingData")
-            .GetProperty("adaptiveFormats")[0]
-            .GetProperty("url")
-            .GetString();
+        if (root.GetProperty("playabilityStatus").GetProperty("status").GetString() == "OK")
+        {
+            return root
+                .GetProperty("streamingData")
+                .GetProperty("adaptiveFormats")[0]
+                .GetProperty("url")
+                .GetString();
+        }
+
+        throw new Exception(Messages.ERROR_EMPTY_URL);
     }
 
     private string GetVideoId(string url)
