@@ -38,5 +38,6 @@
 
     <ItemGroup>
       <None Remove=".github\Workflows\**" />
+      <None Remove="login.png" />
     </ItemGroup>
 </Project>

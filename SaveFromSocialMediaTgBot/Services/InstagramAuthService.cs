@@ -8,7 +8,7 @@ public static class InstagramAuthService
     private static readonly Random _random = new();
     private static readonly LaunchOptions _launchOptions = new()
     {
-        Headless = false,
+        Headless = true,
         ExecutablePath = "/usr/bin/chromium",
         Args = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
     };
