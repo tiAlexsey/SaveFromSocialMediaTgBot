@@ -46,6 +46,7 @@ public class YoutubeVideoScraper
         var responseBody = await response.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(responseBody);
         var root = doc.RootElement;
+        Console.WriteLine(root);
 
         if (root.GetProperty("playabilityStatus").GetProperty("status").GetString() == "OK")
         {
