@@ -10,6 +10,7 @@ public class InstagramVideoScraper
     private readonly string _login;
     private readonly string _password;
     private readonly Regex _pattern = new(@"""https:\S+?\.mp4\S+?""", RegexOptions.Compiled);
+    private string _sessionId;
 
     private readonly LaunchOptions _launchOptions = new()
     {
@@ -22,6 +23,7 @@ public class InstagramVideoScraper
     {
         _login = configuration["INST_LOGIN"];
         _password = configuration["INST_PASSWORD"];
+        _sessionId = configuration["INST_COOKIE_SESSION_ID"] ?? "";
     }
 
     public async Task<string> GetVideoUrlAsync(string pageUrl)
@@ -42,6 +44,20 @@ public class InstagramVideoScraper
         await using var browser = await Puppeteer.LaunchAsync(_launchOptions);
         // Открываем новую страницу в браузере
         await using var page = await browser.NewPageAsync();
+
+        if (!string.IsNullOrWhiteSpace(_sessionId))
+        {
+            InstagramAuthService.Cookies =
+            [
+                new CookieParam
+                {
+                    Name = "sessionid",
+                    Value = _sessionId,
+                    Domain = ".instagram.com"
+                }
+            ];
+            _sessionId = string.Empty;
+        }
 
         await page.SetCookieAsync(InstagramAuthService.Cookies);
         var tryCount = 0;

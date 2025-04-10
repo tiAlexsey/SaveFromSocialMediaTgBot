@@ -13,7 +13,7 @@ public static class InstagramAuthService
         Args = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
     };
 
-    public static CookieParam[] Cookies { get; private set; } = { };
+    public static CookieParam[] Cookies { get; set; } = { };
 
     public static async Task<CookieParam[]> UpdateCookies(string login, string password)
     {
