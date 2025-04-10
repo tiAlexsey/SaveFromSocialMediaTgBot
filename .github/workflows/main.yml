@@ -77,5 +77,5 @@ jobs:
               -e RETRY_COUNT="${{ secrets.RETRY_COUNT }}" \
               -e INST_LOGIN="${{ secrets.INST_LOGIN }}" \
               -e INST_PASSWORD="${{ secrets.INST_PASSWORD }}" \
-              -e INST_PASSWORD="${{ secrets.INST_COOKIE_SESSION_ID }}" \
+              -e INST_COOKIE_SESSION_ID="${{ secrets.INST_COOKIE_SESSION_ID }}" \
               ${{ env.IMAGE_ID }}:${{ env.IMAGE_VERSION }}
