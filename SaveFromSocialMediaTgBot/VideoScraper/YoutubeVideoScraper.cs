@@ -14,9 +14,18 @@ public class YoutubeVideoScraper
     {
         var videoId = GetVideoId(url);
         var visitorData = await GetVisitorData();
+        
         using var httpClient = new HttpClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://www.youtube.com/youtubei/v1/player");
+
         request.Headers.Add(USER_AGENT, USER_AGENT_VALUE);
+        request.Headers.Add("Accept", "application/json, text/plain, */*");
+        request.Headers.Add("Accept-Language", "en-US,en;q=0.9");
+        request.Headers.Add("Origin", "https://www.youtube.com");
+        request.Headers.Add("Referer", "https://www.youtube.com/");
+        request.Headers.Add("Cache-Control", "no-cache");
+        request.Headers.Add("Connection", "keep-alive");
+
         request.Content = new StringContent(
             $$"""
               {
@@ -40,6 +49,9 @@ public class YoutubeVideoScraper
               }
               """
         );
+
+        await Task.Delay(new Random().Next(500, 1500));
+
         var response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
@@ -74,6 +86,9 @@ public class YoutubeVideoScraper
         using var httpClient = new HttpClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "https://www.youtube.com/sw.js_data");
         request.Headers.Add(USER_AGENT, USER_AGENT_VALUE);
+        request.Headers.Add("Accept", "application/json, text/plain, */*");
+        request.Headers.Add("Accept-Language", "en-US,en;q=0.9");
+
         var response = await httpClient.SendAsync(request);
         var responseBody = await response.Content.ReadAsStringAsync();
 
