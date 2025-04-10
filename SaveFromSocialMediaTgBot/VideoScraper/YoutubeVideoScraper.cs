@@ -19,12 +19,12 @@ public class YoutubeVideoScraper
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://www.youtube.com/youtubei/v1/player");
 
         request.Headers.Add(USER_AGENT, USER_AGENT_VALUE);
-        request.Headers.Add("Accept", "application/json, text/plain, */*");
+        request.Headers.Add("Accept", "*/*");
         request.Headers.Add("Accept-Language", "en-US,en;q=0.9");
-        request.Headers.Add("Origin", "https://www.youtube.com");
-        request.Headers.Add("Referer", "https://www.youtube.com/");
-        request.Headers.Add("Cache-Control", "no-cache");
-        request.Headers.Add("Connection", "keep-alive");
+        request.Headers.Add("Origin", "https://m.youtube.com");
+        request.Headers.Add("Referer", "https://m.youtube.com/");
+        request.Headers.Add("X-Goog-Visitor-Id", visitorData);
+        request.Headers.Add("X-Youtube-Bootstrap-Logged-In", "false");
 
         request.Content = new StringContent(
             $$"""
