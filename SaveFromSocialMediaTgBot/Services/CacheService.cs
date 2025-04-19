@@ -1,0 +1,67 @@
+using System.Text.Json;
+using Microsoft.Extensions.Caching.Distributed;
+using SaveFromSocialMediaTgBot.Abstract.Interface;
+
+namespace SaveFromSocialMediaTgBot.Services;
+
+public class CacheService(IDistributedCache cache, ILogger<CacheService> logger) : ICacheService
+{
+    private readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> fetchFunction)
+    {
+        var cached = await GetAsync<T>(key);
+        if (cached != null)
+        {
+            return cached;
+        }
+
+        var result = await fetchFunction();
+
+        if (result is null)
+        {
+            throw new NullReferenceException($"The fetch function returned null: {fetchFunction.Method.Name}");
+        }
+        
+        await SetAsync(key, result);
+        return result;
+    }
+
+    public async Task SetAsync<T>(string key, T value)
+    {
+        try
+        {
+            var serialized = JsonSerializer.Serialize(value, _jsonOptions);
+            await cache.SetStringAsync(key, serialized, new DistributedCacheEntryOptions());
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, ex.Message);
+            throw new InvalidOperationException($"Error serializing value for key '{key}'", ex);
+        }
+    }
+
+    private async Task<T?> GetAsync<T>(string key)
+    {
+        try
+        {
+            var serialized = await cache.GetStringAsync(key);
+            return string.IsNullOrWhiteSpace(serialized)
+                ? default
+                : JsonSerializer.Deserialize<T>(serialized, _jsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, ex.Message);
+            throw new InvalidOperationException($"Error deserializing value for key '{key}'", ex);
+        }
+    }
+
+    private async Task RemoveAsync(string key)
+    {
+        await cache.RemoveAsync(key);
+    }
+}
