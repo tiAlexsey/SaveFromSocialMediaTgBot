@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
 using SaveFromSocialMediaTgBot.Abstract.Interface;
+using SaveFromSocialMediaTgBot.Data.Const;
 
 namespace SaveFromSocialMediaTgBot.Services;
 
@@ -23,7 +24,7 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
 
         if (result is null)
         {
-            throw new NullReferenceException($"The fetch function returned null: {fetchFunction.Method.Name}");
+            throw new NullReferenceException($"{Messages.ERROR_EMPTY_FETCH_FUNC}: {fetchFunction.Method.Name}");
         }
         
         await SetAsync(key, result);
@@ -40,7 +41,7 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
         catch (JsonException ex)
         {
             logger.LogError(ex, ex.Message);
-            throw new InvalidOperationException($"Error serializing value for key '{key}'", ex);
+            throw new InvalidOperationException($"{Messages.ERROR_SERIALIZE_VALUE} '{key}'", ex);
         }
     }
 
@@ -56,7 +57,7 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
         catch (JsonException ex)
         {
             logger.LogError(ex, ex.Message);
-            throw new InvalidOperationException($"Error deserializing value for key '{key}'", ex);
+            throw new InvalidOperationException($"{Messages.ERROR_DESERIALIZE_VALUE} '{key}'", ex);
         }
     }
 

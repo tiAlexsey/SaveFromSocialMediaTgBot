@@ -1,21 +1,27 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using SaveFromSocialMediaTgBot.Abstract.Interface;
 using SaveFromSocialMediaTgBot.Data.Const;
 
 namespace SaveFromSocialMediaTgBot.VideoScraper;
 
-public class YoutubeVideoScraper
+public class YoutubeVideoScraper(HttpClient client) : IYoutubeVideoScraper
 {
-    private readonly Regex _pattern = new(@"iPhone"",\S+""com.google.ios.youtube/");
+    private readonly Regex pattern = new(Pattern.YOUTUBE);
     private const string USER_AGENT = "User-Agent";
     private const string USER_AGENT_VALUE = "com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X; US)";
 
-    public async Task<string> GetVideoUrlsAsync(string url)
+    public async Task<Stream> GetVideoStreamAsync(string url)
+    {
+        var videoUrl = await GetVideoUrlsAsync(url);
+        return await client.GetStreamAsync(videoUrl);
+    }
+
+    private async Task<string> GetVideoUrlsAsync(string url)
     {
         var videoId = GetVideoId(url);
         var visitorData = await GetVisitorData();
-        
-        using var httpClient = new HttpClient();
+
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://www.youtube.com/youtubei/v1/player");
 
         request.Headers.Add(USER_AGENT, USER_AGENT_VALUE);
@@ -52,7 +58,7 @@ public class YoutubeVideoScraper
 
         await Task.Delay(new Random().Next(500, 1500));
 
-        var response = await httpClient.SendAsync(request);
+        var response = await client.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
         var responseBody = await response.Content.ReadAsStringAsync();
@@ -83,16 +89,15 @@ public class YoutubeVideoScraper
 
     private async Task<string> GetVisitorData()
     {
-        using var httpClient = new HttpClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "https://www.youtube.com/sw.js_data");
         request.Headers.Add(USER_AGENT, USER_AGENT_VALUE);
         request.Headers.Add("Accept", "application/json, text/plain, */*");
         request.Headers.Add("Accept-Language", "en-US,en;q=0.9");
 
-        var response = await httpClient.SendAsync(request);
+        var response = await client.SendAsync(request);
         var responseBody = await response.Content.ReadAsStringAsync();
 
-        var match = _pattern.Match(responseBody);
+        var match = pattern.Match(responseBody);
         if (match.Success)
         {
             return match.Value.Split("\"")[2];

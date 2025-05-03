@@ -15,6 +15,12 @@ public class ParsedMessage
     public ChatSettings Settings { get; }
     public string? VideoLink { get; }
 
+    public MessageEntityType? Type => BotCommand is not null
+        ? MessageEntityType.BotCommand
+        : VideoLink is not null
+            ? MessageEntityType.Url
+            : null;
+
     public ParsedMessage(Message message, string botName, ChatSettings chatSettings)
     {
         Id = message.Id;
@@ -25,7 +31,7 @@ public class ParsedMessage
         Settings = chatSettings;
 
         var messageEntities = GetMessageEntities(message);
-        IsBotMention = CheckIsBootMention(messageEntities, botName);
+        IsBotMention = CheckIsBotMention(messageEntities, botName);
         VideoLink = messageEntities.FirstOrDefault(x => x.Type == MessageEntityType.Url).Value;
         BotCommand = messageEntities.FirstOrDefault(x => x.Type == MessageEntityType.BotCommand).Value;
     }
@@ -49,7 +55,7 @@ public class ParsedMessage
         return message.Entities.Select((t, i) => (t.Type, entityValues[i])).ToList();
     }
 
-    private static bool CheckIsBootMention(List<(MessageEntityType Type, string Value)> entities, string botName)
+    private static bool CheckIsBotMention(List<(MessageEntityType Type, string Value)> entities, string botName)
     {
         return entities.FirstOrDefault(x => x.Type == MessageEntityType.Mention && x.Value == botName).Value != null;
     }

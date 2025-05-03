@@ -1,17 +1,15 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using SaveFromSocialMediaTgBot.Abstract.Interface;
 using SaveFromSocialMediaTgBot.Data.Const;
 
 namespace SaveFromSocialMediaTgBot.VideoScraper;
 
-public class TwitterVideoScraper
+public class TwitterVideoScraper(IConfiguration configuration, HttpClient client) : ITwitterVideoScraper
 {
-    private readonly string _authorization;
-    private readonly Regex _twRegex =
-        new(
-            @"https?://(?:(?:www|m(?:obile)?)\.)?(?:twitter\.com|x\.com)/(?:(?:i/web|[^/]+)/status|statuses)/(\d+)(?:/(?:video|photo)/(\d+))?",
-            RegexOptions.Compiled);
+    private readonly string authorization = configuration[Env.TWITTER_TOKEN] ?? throw new NullReferenceException();
+    private readonly Regex pattern = new(Pattern.TWITTER, RegexOptions.Compiled);
 
     private readonly Dictionary<string, object> variables = new()
     {
@@ -55,15 +53,16 @@ public class TwitterVideoScraper
         { "creator_subscriptions_tweet_preview_api_enabled", true },
     };
 
-    public TwitterVideoScraper(IConfiguration configuration)
+    public async Task<Stream> GetVideoStreamAsync(string url)
     {
-        _authorization = configuration["TWITTER_TOKEN"];
+        var postId = GetPostId(url);
+        var videoUrl = (await GetVideoUrlsAsync(postId)).FirstOrDefault();
+        return await client.GetStreamAsync(videoUrl);
     }
 
-    public async Task<List<string>> GetVideoUrlsAsync(string postId)
+    private async Task<List<string>> GetVideoUrlsAsync(string postId)
     {
-        HttpClient client = new();
-        await SetCookiesAsync(client);
+        await SetCookiesAsync();
 
         variables["tweetId"] = postId;
         var query = JsonSerializer.Serialize(variables);
@@ -91,17 +90,17 @@ public class TwitterVideoScraper
         return videoUrls;
     }
 
-    public string GetPostId(string url)
+    private string GetPostId(string url)
     {
-        var match = _twRegex.Match(url);
+        var match = pattern.Match(url);
         if (!match.Success)
             throw new FormatException(Messages.ERROR_EMPTY_URL);
         return match.Groups[1].Value;
     }
 
-    private async Task SetCookiesAsync(HttpClient client)
+    private async Task SetCookiesAsync()
     {
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _authorization);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authorization);
         var response = await client.PostAsync("https://api.x.com/1.1/guest/activate.json", null);
         response.EnsureSuccessStatusCode();
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
