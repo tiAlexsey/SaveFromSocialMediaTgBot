@@ -4,10 +4,14 @@ using SaveFromSocialMediaTgBot.Data.Const;
 
 namespace SaveFromSocialMediaTgBot.VideoScraper;
 
-public class TiktokVideoScraper(IConfiguration configuration, HttpClient client) : ITiktokVideoScraper
+public class TiktokVideoScraper(IConfiguration configuration, HttpClient client) : IVideoScraper
 {
     private readonly int retryCount = int.TryParse(configuration[Env.RETRY_COUNT], out var count) ? count : 1;
     private readonly Regex pattern = new(Pattern.TICKTOCK, RegexOptions.Compiled);
+
+
+    public bool CanHandle(string url)
+        => url.Contains("tiktok", StringComparison.OrdinalIgnoreCase);
 
     public async Task<Stream> GetVideoStreamAsync(string pageUrl)
     {

@@ -6,7 +6,7 @@ using SaveFromSocialMediaTgBot.Data.Const;
 
 namespace SaveFromSocialMediaTgBot.VideoScraper;
 
-public class TwitterVideoScraper(IConfiguration configuration, HttpClient client) : ITwitterVideoScraper
+public class TwitterVideoScraper(IConfiguration configuration, HttpClient client) : IVideoScraper
 {
     private readonly string authorization = configuration[Env.TWITTER_TOKEN] ?? throw new NullReferenceException();
     private readonly Regex pattern = new(Pattern.TWITTER, RegexOptions.Compiled);
@@ -52,6 +52,10 @@ public class TwitterVideoScraper(IConfiguration configuration, HttpClient client
         { "responsive_web_twitter_article_tweet_consumption_enabled", true },
         { "creator_subscriptions_tweet_preview_api_enabled", true },
     };
+
+    public bool CanHandle(string url)
+        => url.Contains("twitter", StringComparison.OrdinalIgnoreCase) ||
+           url.Contains("x.com", StringComparison.OrdinalIgnoreCase);
 
     public async Task<Stream> GetVideoStreamAsync(string url)
     {
@@ -105,6 +109,7 @@ public class TwitterVideoScraper(IConfiguration configuration, HttpClient client
         response.EnsureSuccessStatusCode();
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var token = json.RootElement.GetProperty("guest_token").GetString();
+        client.DefaultRequestHeaders.Remove("x-guest-token");
         client.DefaultRequestHeaders.Add("x-guest-token", token);
     }
 }

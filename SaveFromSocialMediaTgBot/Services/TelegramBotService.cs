@@ -9,7 +9,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 namespace SaveFromSocialMediaTgBot.Services;
 
 public class TelegramBotService(
-    IVideoScraper scraperService,
+    ScraperService scraperService,
     ICacheService cacheService,
     ILogger<TelegramBotService> logger,
     IConfiguration configuration): ITelegramBotService

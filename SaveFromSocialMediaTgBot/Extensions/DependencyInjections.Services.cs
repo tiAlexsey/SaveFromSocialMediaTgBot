@@ -32,10 +32,10 @@ public static partial class DependencyInjections
     private static void AddVideoScrapers(this IServiceCollection services)
     {
         
-        services.AddHttpClient<IInstagramVideoScraper, InstagramVideoScraper>();
-        services.AddHttpClient<ITwitterVideoScraper, TwitterVideoScraper>();
-        services.AddHttpClient<IYoutubeVideoScraper, YoutubeVideoScraper>();
-        services.AddHttpClient<ITiktokVideoScraper, TiktokVideoScraper>(client =>
+        services.AddHttpClient<IVideoScraper, InstagramVideoScraper>();
+        services.AddHttpClient<IVideoScraper, TwitterVideoScraper>();
+        services.AddHttpClient<IVideoScraper, YoutubeVideoScraper>();
+        services.AddHttpClient<IVideoScraper, TiktokVideoScraper>(client =>
         {
             var cookieContainer = new CookieContainer();
             var handler = new HttpClientHandler
@@ -47,6 +47,6 @@ public static partial class DependencyInjections
             client = new HttpClient(handler);
         });
 
-        services.AddSingleton<IVideoScraper, ScraperService>();
+        services.AddSingleton<ScraperService>();
     }
 }
