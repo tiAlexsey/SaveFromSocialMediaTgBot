@@ -64,14 +64,14 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
             // Закрываем браузер
             await browser.CloseAsync();
 
-            if (match.Success)
+            if (match!.Success)
             {
                 return match.Value
                     .Trim('"')
                     .Replace("\\", "");
             }
         }
-        catch (Exception ex)
+        catch
         {
             var fileName = $"Screenshot-{Regex.Match(pageUrl, "igsh=[^&]+")}.png";
             Console.WriteLine(fileName);

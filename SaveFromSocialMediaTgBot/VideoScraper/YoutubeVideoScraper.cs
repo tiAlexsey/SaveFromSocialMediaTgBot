@@ -75,7 +75,7 @@ public class YoutubeVideoScraper(HttpClient client) : IVideoScraper
                 .GetProperty("streamingData")
                 .GetProperty("adaptiveFormats")[0]
                 .GetProperty("url")
-                .GetString();
+                .GetString()!;
         }
 
         throw new Exception(Messages.ERROR_EMPTY_URL);

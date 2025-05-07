@@ -12,37 +12,27 @@ public class TelegramBotService(
     ScraperService scraperService,
     ICacheService cacheService,
     ILogger<TelegramBotService> logger,
-    IConfiguration configuration): ITelegramBotService
+    IConfiguration configuration) : ITelegramBotService
 {
     private readonly string botName = configuration[Env.BOT_NAME] ?? throw new NullReferenceException();
 
     public async Task UpdateMessageWorkflowAsync(ITelegramBotClient botClient, Update update,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var chatSettings = await cacheService.GetOrCreateAsync(update.Message.Chat.Id.ToString(),
-                async () => new ChatSettings());
-            var message = new ParsedMessage(update.Message, botName, chatSettings);
+        var chatSettings = await cacheService.GetOrCreateAsync(update.Message!.Chat.Id.ToString(),
+            async () => new ChatSettings());
+        var message = new ParsedMessage(update.Message, botName, chatSettings);
 
-            switch (message.Type)
-            {
-                case MessageEntityType.BotCommand:
-                    await ProcessBotCommandAsync(botClient, message, cancellationToken);
-                    return;
-                case MessageEntityType.Url:
-                    await LinkHandlerAsync(botClient, message, cancellationToken);
-                    break;
-                default:
-                    return;
-            }
-        }
-        catch (Exception ex)
+        switch (message.Type)
         {
-            var logMessage = $"я обкакался, вот ошибка: {ex.Message}";
-            logger.LogError(logMessage + "\n" + ex.Message + ex);
-            await botClient.SetMessageReaction(update.Message.Chat.Id, update.Message.Id, ["\ud83d\udca9"],
-                cancellationToken: cancellationToken);
+            case MessageEntityType.BotCommand:
+                await ProcessBotCommandAsync(botClient, message, cancellationToken);
+                return;
+            case MessageEntityType.Url:
+                await LinkHandlerAsync(botClient, message, cancellationToken);
+                break;
+            default:
+                return;
         }
     }
 
@@ -59,7 +49,7 @@ public class TelegramBotService(
     {
         await botClient.SetMessageReaction(message.ChatId, message.Id, ["\ud83d\udc40"],
             cancellationToken: cancellationToken);
-        var videoStream = await scraperService.GetVideoStreamAsync(message.VideoLink);
+        var videoStream = await scraperService.GetVideoStreamAsync(message.VideoLink!);
         await botClient.SendVideo(chatId: message.ChatId, video: videoStream, cancellationToken: cancellationToken);
         await botClient.SetMessageReaction(message.ChatId, message.Id, ["\ud83d\udcaf"],
             cancellationToken: cancellationToken);
@@ -83,7 +73,7 @@ public class TelegramBotService(
                         InlineKeyboardButton.WithCallbackData(Button.TURN_OFF, false.ToString())
                     ]
                 ]);
-                await botClient.SendTextMessageAsync(
+                await botClient.SendMessage(
                     chatId: message.ChatId,
                     text: Command.NO_MENTION_MODE_TEXT,
                     replyMarkup: keyboard,
@@ -99,7 +89,7 @@ public class TelegramBotService(
     {
         var model = new
         {
-            ChatId = update.CallbackQuery.Message.Chat.Id,
+            ChatId = update.CallbackQuery!.Message!.Chat.Id,
             UserId = update.CallbackQuery.From.Id,
             Command = update.CallbackQuery.Message?.Text,
             Value = update.CallbackQuery.Data,
@@ -107,7 +97,8 @@ public class TelegramBotService(
 
         if (!await IsAllowSettingsAsync(botClient, model.ChatId, model.UserId, cancellationToken))
         {
-            await botClient.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id, text: Messages.ACCESS_DENIED);
+            await botClient.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id, text: Messages.ACCESS_DENIED,
+                cancellationToken: cancellationToken);
             return;
         }
 
@@ -124,7 +115,8 @@ public class TelegramBotService(
                 }
 
                 await cacheService.SetAsync(model.ChatId.ToString(), chatSettings);
-                await botClient.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id, text: Messages.SUCCESS);
+                await botClient.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id, text: Messages.SUCCESS,
+                    cancellationToken: cancellationToken);
                 break;
             }
         }

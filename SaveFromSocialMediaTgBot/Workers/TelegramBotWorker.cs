@@ -27,16 +27,26 @@ public class TelegramBotWorker(
     private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update,
         CancellationToken cancellationToken)
     {
-        switch (update)
+        try
         {
-            case { Type: UpdateType.CallbackQuery }:
-                await telegramBotService.UpdateCallbackWorkflowAsync(botClient, update, cancellationToken);
-                return;
-            case { Type: UpdateType.Message, Message.Type: MessageType.Text }:
-                await telegramBotService.UpdateMessageWorkflowAsync(botClient, update, cancellationToken);
-                return;
-            default:
-                return;
+            switch (update)
+            {
+                case { Type: UpdateType.CallbackQuery }:
+                    await telegramBotService.UpdateCallbackWorkflowAsync(botClient, update, cancellationToken);
+                    return;
+                case { Type: UpdateType.Message, Message.Type: MessageType.Text }:
+                    await telegramBotService.UpdateMessageWorkflowAsync(botClient, update, cancellationToken);
+                    return;
+                default:
+                    return;
+            }
+        }
+        catch (Exception ex)
+        {
+            var logMessage = $"я обкакался, вот ошибка: {ex.Message}";
+            logger.LogError(logMessage + "\n" + ex.Message + ex);
+            await botClient.SetMessageReaction(update.Message!.Chat.Id, update.Message.Id, ["\ud83d\udca9"],
+                cancellationToken: cancellationToken);
         }
     }
 

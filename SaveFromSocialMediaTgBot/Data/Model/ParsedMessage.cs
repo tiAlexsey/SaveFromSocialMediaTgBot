@@ -25,7 +25,7 @@ public class ParsedMessage
     {
         Id = message.Id;
         ChatId = message.Chat.Id;
-        UserId = message.From.Id;
+        UserId = message.From!.Id;
         Text = message.Text;
         ChatType = message.Chat.Type;
         Settings = chatSettings;
@@ -51,8 +51,8 @@ public class ParsedMessage
 
     private static List<(MessageEntityType Type, string Value)> ParseMessageEntities(Message message)
     {
-        var entityValues = message.EntityValues.ToArray();
-        return message.Entities.Select((t, i) => (t.Type, entityValues[i])).ToList();
+        var entityValues = message.EntityValues!.ToArray();
+        return message.Entities!.Select((t, i) => (t.Type, entityValues[i])).ToList();
     }
 
     private static bool CheckIsBotMention(List<(MessageEntityType Type, string Value)> entities, string botName)

@@ -87,7 +87,7 @@ public class TwitterVideoScraper(IConfiguration configuration, HttpClient client
                 var best = variants.Where(v => v.TryGetProperty("bitrate", out _))
                     .OrderByDescending(v => v.GetProperty("bitrate").GetInt32())
                     .First();
-                videoUrls.Add(best.GetProperty("url").GetString());
+                videoUrls.Add(best.GetProperty("url").GetString()!);
             }
         }
 
