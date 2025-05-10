@@ -10,7 +10,6 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
 {
     private readonly Random random = new();
     private readonly Regex pattern = new(Pattern.INSTAGRAM, RegexOptions.Compiled);
-    private string sessionId = configuration[Env.INST_COOKIE_SESSION_ID] ?? "";
     private readonly string login = configuration[Env.INST_LOGIN] ?? "";
     private readonly string password = configuration[Env.INST_PASSWORD] ?? "";
 
@@ -39,7 +38,7 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
         // Открываем новую страницу в браузере
         await using var page = await browser.NewPageAsync();
         // Ставим куки
-        await SetCookies(page);
+        await SetCookiesAsync(page);
 
         var tryCount = 0;
         try
@@ -83,22 +82,8 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
         return null;
     }
 
-    private async Task SetCookies(IPage page)
+    private static async Task SetCookiesAsync(IPage page)
     {
-        if (!string.IsNullOrWhiteSpace(sessionId))
-        {
-            Cookies =
-            [
-                new CookieParam
-                {
-                    Name = "sessionid",
-                    Value = sessionId,
-                    Domain = ".instagram.com"
-                }
-            ];
-            sessionId = string.Empty;
-        }
-
         await page.SetCookieAsync(Cookies);
     }
 
