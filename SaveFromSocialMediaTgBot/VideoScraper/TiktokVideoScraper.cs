@@ -15,8 +15,6 @@ public class TiktokVideoScraper(IConfiguration configuration, HttpClient client)
 
     public async Task<Stream> GetVideoStreamAsync(string pageUrl)
     {
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-
         var linkVideo = await GetVideoLinkAsync(client, pageUrl);
 
         if (linkVideo is null) throw new FormatException(Messages.ERROR_EMPTY_URL);
