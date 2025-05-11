@@ -75,9 +75,11 @@ public class TwitterVideoScraper(IConfiguration configuration, HttpClient client
             $"https://x.com/i/api/graphql/2ICDjqPd81tulZcYrtpTuQ/TweetResultByRestId?variables={Uri.EscapeDataString(query)}&features={Uri.EscapeDataString(feat)}";
         var response = await client.GetAsync(url);
         response.EnsureSuccessStatusCode();
+        
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var media = json.RootElement.GetProperty("data").GetProperty("tweetResult").GetProperty("result")
             .GetProperty("legacy").GetProperty("entities").GetProperty("media");
+        
         var videoUrls = new List<string>();
         foreach (var item in media.EnumerateArray())
         {
@@ -105,11 +107,11 @@ public class TwitterVideoScraper(IConfiguration configuration, HttpClient client
     private async Task SetCookiesAsync()
     {
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authorization);
+        client.DefaultRequestHeaders.Remove("x-guest-token");
         var response = await client.PostAsync("https://api.x.com/1.1/guest/activate.json", null);
         response.EnsureSuccessStatusCode();
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var token = json.RootElement.GetProperty("guest_token").GetString();
-        client.DefaultRequestHeaders.Remove("x-guest-token");
         client.DefaultRequestHeaders.Add("x-guest-token", token);
     }
 }
