@@ -32,6 +32,12 @@
 
     <ItemGroup>
       <Compile Remove=".github\Workflows\**" />
+      <Compile Update="Extensions\DependencyInjections.Configs.cs">
+        <DependentUpon>DependencyInjections.cs</DependentUpon>
+      </Compile>
+      <Compile Update="Extensions\DependencyInjections.Services.cs">
+        <DependentUpon>DependencyInjections.cs</DependentUpon>
+      </Compile>
     </ItemGroup>
 
     <ItemGroup>

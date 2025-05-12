@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using SaveFromSocialMediaTgBot.Abstract.Interface;
 using SaveFromSocialMediaTgBot.Data.Const;
 
-namespace SaveFromSocialMediaTgBot.VideoScraper;
+namespace SaveFromSocialMediaTgBot.Services.VideoScraper;
 
 public class TwitterVideoScraper(IConfiguration configuration, HttpClient client) : IVideoScraper
 {

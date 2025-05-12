@@ -4,7 +4,7 @@ using PuppeteerSharp.Input;
 using SaveFromSocialMediaTgBot.Abstract.Interface;
 using SaveFromSocialMediaTgBot.Data.Const;
 
-namespace SaveFromSocialMediaTgBot.VideoScraper;
+namespace SaveFromSocialMediaTgBot.Services.VideoScraper;
 
 public class InstagramVideoScraper(IConfiguration configuration, HttpClient client) : IVideoScraper
 {

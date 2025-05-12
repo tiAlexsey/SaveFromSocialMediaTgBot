@@ -3,18 +3,20 @@ using PuppeteerSharp;
 using SaveFromSocialMediaTgBot.Abstract.Interface;
 using SaveFromSocialMediaTgBot.Data.Const;
 using SaveFromSocialMediaTgBot.Services;
-using SaveFromSocialMediaTgBot.VideoScraper;
+using SaveFromSocialMediaTgBot.Services.VideoScraper;
 
 namespace SaveFromSocialMediaTgBot.Extensions;
 
 public static partial class DependencyInjections
 {
-    public static void AddServices(this IServiceCollection services, IConfiguration configuration)
+    private static void AddServices(this IServiceCollection services, IConfiguration configuration)
     {
         new BrowserFetcher().DownloadAsync();
         services.AddVideoScrapers();
         services.AddCache(configuration);
         services.AddTransient<ITelegramBotService, TelegramBotService>();
+
+        services.AddHostedService<TelegramBotWorker>();
     }
 
     private static void AddCache(this IServiceCollection services, IConfiguration configuration)
@@ -31,7 +33,6 @@ public static partial class DependencyInjections
 
     private static void AddVideoScrapers(this IServiceCollection services)
     {
-        
         services.AddHttpClient<IVideoScraper, InstagramVideoScraper>();
         services.AddHttpClient<IVideoScraper, TwitterVideoScraper>();
         services.AddHttpClient<IVideoScraper, YoutubeVideoScraper>();

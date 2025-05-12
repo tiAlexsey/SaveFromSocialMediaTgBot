@@ -5,7 +5,7 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
-namespace SaveFromSocialMediaTgBot.Workers;
+namespace SaveFromSocialMediaTgBot;
 
 public class TelegramBotWorker(
     ILogger<TelegramBotWorker> logger,
