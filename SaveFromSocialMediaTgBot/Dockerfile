@@ -6,7 +6,6 @@ RUN apt-get update && apt-get install -y chromium
 
 # Секретные переменные из GitHub
 ENV TOKEN=${TOKEN}
-ENV BOT_NAME=${BOT_NAME}
 ENV TWITTER_TOKEN=${TWITTER_TOKEN}
 ENV RETRY_COUNT=${RETRY_COUNT}
 ENV INST_LOGIN=${INST_LOGIN}

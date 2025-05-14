@@ -31,7 +31,7 @@ public class ParsedMessage
         Settings = chatSettings;
 
         var messageEntities = GetMessageEntities(message);
-        IsBotMention = CheckIsBotMention(messageEntities, botName);
+        IsBotMention = CheckIsBotMention(messageEntities, $"@{botName}");
         VideoLink = messageEntities.FirstOrDefault(x => x.Type == MessageEntityType.Url).Value;
         BotCommand = messageEntities.FirstOrDefault(x => x.Type == MessageEntityType.BotCommand).Value;
     }

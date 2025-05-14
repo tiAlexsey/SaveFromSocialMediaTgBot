@@ -11,17 +11,15 @@ namespace SaveFromSocialMediaTgBot.Services;
 public class TelegramBotService(
     ScraperService scraperService,
     ICacheService cacheService,
-    ILogger<TelegramBotService> logger,
-    IConfiguration configuration) : ITelegramBotService
+    ILogger<TelegramBotService> logger) : ITelegramBotService
 {
-    private readonly string botName = configuration[Env.BOT_NAME] ?? throw new NullReferenceException();
-
     public async Task UpdateMessageWorkflowAsync(ITelegramBotClient botClient, Update update,
         CancellationToken cancellationToken)
     {
         var chatSettings = await cacheService.GetOrCreateAsync(update.Message!.Chat.Id.ToString(),
             async () => new ChatSettings());
-        var message = new ParsedMessage(update.Message, botName, chatSettings);
+        var botInfo = await botClient.GetMe(cancellationToken: cancellationToken);
+        var message = new ParsedMessage(update.Message, botInfo.Username!, chatSettings);
 
         switch (message.Type)
         {
@@ -30,7 +28,7 @@ public class TelegramBotService(
                 return;
             case MessageEntityType.Url:
                 await LinkHandlerAsync(botClient, message, cancellationToken);
-                break;
+                return;
             default:
                 return;
         }
@@ -64,23 +62,23 @@ public class TelegramBotService(
             return;
         }
 
+        var botInfo = await botClient.GetMe(cancellationToken: cancellationToken);
         switch (message.BotCommand)
         {
-            case var x when x == $"{Command.NO_MENTION_MODE_COMMAND}{botName}":
+            case var command when command == $"{Command.NO_MENTION_MODE_COMMAND}@{botInfo.Username}":
+            {
                 var keyboard = new InlineKeyboardMarkup([
                     [
                         InlineKeyboardButton.WithCallbackData(Button.TURN_ON, true.ToString()),
                         InlineKeyboardButton.WithCallbackData(Button.TURN_OFF, false.ToString())
                     ]
                 ]);
-                await botClient.SendMessage(
-                    chatId: message.ChatId,
-                    text: Command.NO_MENTION_MODE_TEXT,
-                    replyMarkup: keyboard,
-                    cancellationToken: cancellationToken);
+                await botClient.SendMessage(chatId: message.ChatId, text: Command.NO_MENTION_MODE_TEXT,
+                    replyMarkup: keyboard, cancellationToken: cancellationToken);
                 await botClient.DeleteMessage(chatId: message.ChatId, messageId: message.Id,
                     cancellationToken: cancellationToken);
                 break;
+            }
         }
     }
 
@@ -132,7 +130,7 @@ public class TelegramBotService(
     private async Task LinkHandlerAsync(ITelegramBotClient botClient, ParsedMessage message,
         CancellationToken cancellationToken)
     {
-        logger.LogInformation($"Received message to bot. ChatId: {message.ChatId}. Message : {message.Text}");
+        logger.LogInformation($"Received message to bot. ChatId: {message.ChatId}. Message: {message.Text}");
 
         switch (message.ChatType)
         {
@@ -146,10 +144,8 @@ public class TelegramBotService(
                 break;
             }
             case ChatType.Private:
-            {
                 await ProcessLinkMessageAsync(botClient, message, cancellationToken);
                 break;
-            }
             default:
                 return;
         }
