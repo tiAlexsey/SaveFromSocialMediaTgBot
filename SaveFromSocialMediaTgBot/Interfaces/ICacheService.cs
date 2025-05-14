@@ -1,5 +1,5 @@
 
-namespace SaveFromSocialMediaTgBot.Abstract.Interface;
+namespace SaveFromSocialMediaTgBot.Interfaces;
 
 public interface ICacheService
 {

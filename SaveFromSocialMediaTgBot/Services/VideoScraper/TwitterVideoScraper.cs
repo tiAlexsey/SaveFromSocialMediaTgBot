@@ -1,15 +1,15 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using SaveFromSocialMediaTgBot.Abstract.Interface;
-using SaveFromSocialMediaTgBot.Data.Const;
+using SaveFromSocialMediaTgBot.Data.Constants;
+using SaveFromSocialMediaTgBot.Interfaces;
 
 namespace SaveFromSocialMediaTgBot.Services.VideoScraper;
 
 public class TwitterVideoScraper(IConfiguration configuration, HttpClient client) : IVideoScraper
 {
-    private readonly string authorization = configuration[Env.TWITTER_TOKEN] ?? throw new NullReferenceException();
-    private readonly Regex pattern = new(Pattern.TWITTER, RegexOptions.Compiled);
+    private readonly string authorization = configuration[EnvironmentConstants.TWITTER_TOKEN] ?? throw new NullReferenceException();
+    private readonly Regex pattern = new(PatternConstants.TWITTER, RegexOptions.Compiled);
 
     private readonly Dictionary<string, object> variables = new()
     {
@@ -100,7 +100,7 @@ public class TwitterVideoScraper(IConfiguration configuration, HttpClient client
     {
         var match = pattern.Match(url);
         if (!match.Success)
-            throw new FormatException(Messages.ERROR_EMPTY_URL);
+            throw new FormatException(MessageConstants.ERROR_EMPTY_URL);
         return match.Groups[1].Value;
     }
 

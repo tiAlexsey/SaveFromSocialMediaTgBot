@@ -1,13 +1,13 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using SaveFromSocialMediaTgBot.Abstract.Interface;
-using SaveFromSocialMediaTgBot.Data.Const;
+using SaveFromSocialMediaTgBot.Data.Constants;
+using SaveFromSocialMediaTgBot.Interfaces;
 
 namespace SaveFromSocialMediaTgBot.Services.VideoScraper;
 
 public class YoutubeVideoScraper(HttpClient client) : IVideoScraper
 {
-    private readonly Regex pattern = new(Pattern.YOUTUBE);
+    private readonly Regex pattern = new(PatternConstants.YOUTUBE);
     private const string USER_AGENT = "User-Agent";
     private const string USER_AGENT_VALUE = "com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X; US)";
 
@@ -67,7 +67,6 @@ public class YoutubeVideoScraper(HttpClient client) : IVideoScraper
         var responseBody = await response.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(responseBody);
         var root = doc.RootElement;
-        Console.WriteLine(root);
 
         if (root.GetProperty("playabilityStatus").GetProperty("status").GetString() == "OK")
         {
@@ -78,7 +77,7 @@ public class YoutubeVideoScraper(HttpClient client) : IVideoScraper
                 .GetString()!;
         }
 
-        throw new Exception(Messages.ERROR_EMPTY_URL);
+        throw new Exception(MessageConstants.ERROR_EMPTY_URL);
     }
 
     private string GetVideoId(string url)
@@ -106,6 +105,6 @@ public class YoutubeVideoScraper(HttpClient client) : IVideoScraper
             return match.Value.Split("\"")[2];
         }
 
-        throw new FormatException(Messages.ERROR_EMPTY_VISITOR_DATA);
+        throw new FormatException(MessageConstants.ERROR_EMPTY_VISITOR_DATA);
     }
 }

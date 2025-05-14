@@ -1,17 +1,17 @@
 using System.Text.RegularExpressions;
 using PuppeteerSharp;
 using PuppeteerSharp.Input;
-using SaveFromSocialMediaTgBot.Abstract.Interface;
-using SaveFromSocialMediaTgBot.Data.Const;
+using SaveFromSocialMediaTgBot.Data.Constants;
+using SaveFromSocialMediaTgBot.Interfaces;
 
 namespace SaveFromSocialMediaTgBot.Services.VideoScraper;
 
 public class InstagramVideoScraper(IConfiguration configuration, HttpClient client) : IVideoScraper
 {
     private readonly Random random = new();
-    private readonly Regex pattern = new(Pattern.INSTAGRAM, RegexOptions.Compiled);
-    private readonly string login = configuration[Env.INST_LOGIN] ?? "";
-    private readonly string password = configuration[Env.INST_PASSWORD] ?? "";
+    private readonly Regex pattern = new(PatternConstants.INSTAGRAM, RegexOptions.Compiled);
+    private readonly string login = configuration[EnvironmentConstants.INST_LOGIN] ?? "";
+    private readonly string password = configuration[EnvironmentConstants.INST_PASSWORD] ?? "";
 
     private readonly LaunchOptions launchOptions = new()
     {
@@ -27,7 +27,7 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
 
     public async Task<Stream> GetVideoStreamAsync(string url)
     {
-        var videoUrl = await TryGetVideoUrlAsync(url) ?? throw new FormatException(Messages.ERROR_EMPTY_URL);
+        var videoUrl = await TryGetVideoUrlAsync(url) ?? throw new FormatException(MessageConstants.ERROR_EMPTY_URL);
         return await client.GetStreamAsync(videoUrl);
     }
 

@@ -1,6 +1,6 @@
-namespace SaveFromSocialMediaTgBot.Data.Const;
+namespace SaveFromSocialMediaTgBot.Data.Constants;
 
-public static class Env
+public static class EnvironmentConstants
 {
     public const string INST_LOGIN = "INST_LOGIN";
     public const string INST_PASSWORD = "INST_PASSWORD";

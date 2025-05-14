@@ -1,7 +1,7 @@
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
-namespace SaveFromSocialMediaTgBot.Data.Model;
+namespace SaveFromSocialMediaTgBot.Data.Models;
 
 public class ParsedMessage
 {

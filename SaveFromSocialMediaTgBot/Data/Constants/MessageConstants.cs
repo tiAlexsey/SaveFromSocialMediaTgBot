@@ -1,6 +1,6 @@
-namespace SaveFromSocialMediaTgBot.Data.Const;
+namespace SaveFromSocialMediaTgBot.Data.Constants;
 
-public static class Messages
+public static class MessageConstants
 {
     public const string SUCCESS = "Success";
     public const string ACCESS_DENIED = "You don't have permisson to settings this chat";

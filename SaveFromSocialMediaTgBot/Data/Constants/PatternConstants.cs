@@ -1,9 +1,9 @@
-namespace SaveFromSocialMediaTgBot.Data.Const;
+namespace SaveFromSocialMediaTgBot.Data.Constants;
 
 /// <summary>
-/// Pattern for searching link video inside
+/// Pattern for searching video link inside html
 /// </summary>
-public static class Pattern
+public static class PatternConstants
 {
     public const string INSTAGRAM = @"""https:\S+?\.mp4\S+?""";
     public const string TICKTOCK = @"https?:\\u002F\\u002F[^""'\s]*?mime_type=video_mp4[^""'\s]*?tt_chain_token";

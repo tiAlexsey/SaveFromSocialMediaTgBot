@@ -1,7 +1,7 @@
 using System.Net;
 using PuppeteerSharp;
-using SaveFromSocialMediaTgBot.Abstract.Interface;
-using SaveFromSocialMediaTgBot.Data.Const;
+using SaveFromSocialMediaTgBot.Data.Constants;
+using SaveFromSocialMediaTgBot.Interfaces;
 using SaveFromSocialMediaTgBot.Services;
 using SaveFromSocialMediaTgBot.Services.VideoScraper;
 
@@ -21,7 +21,7 @@ public static partial class DependencyInjections
 
     private static void AddCache(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration[Env.REDIS_CONNECTION_STRING];
+        var connectionString = configuration[EnvironmentConstants.REDIS_CONNECTION_STRING];
         services.AddStackExchangeRedisCache(options =>
         {
             options.Configuration = connectionString;

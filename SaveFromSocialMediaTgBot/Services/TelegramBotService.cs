@@ -1,6 +1,6 @@
-using SaveFromSocialMediaTgBot.Abstract.Interface;
-using SaveFromSocialMediaTgBot.Data.Const;
-using SaveFromSocialMediaTgBot.Data.Model;
+using SaveFromSocialMediaTgBot.Data.Constants;
+using SaveFromSocialMediaTgBot.Data.Models;
+using SaveFromSocialMediaTgBot.Interfaces;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -65,15 +65,15 @@ public class TelegramBotService(
         var botInfo = await botClient.GetMe(cancellationToken: cancellationToken);
         switch (message.BotCommand)
         {
-            case var command when command == $"{Command.NO_MENTION_MODE_COMMAND}@{botInfo.Username}":
+            case var command when command == $"{CommandConstants.NO_MENTION_MODE_COMMAND}@{botInfo.Username}":
             {
                 var keyboard = new InlineKeyboardMarkup([
                     [
-                        InlineKeyboardButton.WithCallbackData(Button.TURN_ON, true.ToString()),
-                        InlineKeyboardButton.WithCallbackData(Button.TURN_OFF, false.ToString())
+                        InlineKeyboardButton.WithCallbackData(ButtonConstants.TURN_ON, true.ToString()),
+                        InlineKeyboardButton.WithCallbackData(ButtonConstants.TURN_OFF, false.ToString())
                     ]
                 ]);
-                await botClient.SendMessage(chatId: message.ChatId, text: Command.NO_MENTION_MODE_TEXT,
+                await botClient.SendMessage(chatId: message.ChatId, text: CommandConstants.NO_MENTION_MODE_TEXT,
                     replyMarkup: keyboard, cancellationToken: cancellationToken);
                 await botClient.DeleteMessage(chatId: message.ChatId, messageId: message.Id,
                     cancellationToken: cancellationToken);
@@ -95,7 +95,8 @@ public class TelegramBotService(
 
         if (!await IsAllowSettingsAsync(botClient, model.ChatId, model.UserId, cancellationToken))
         {
-            await botClient.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id, text: Messages.ACCESS_DENIED,
+            await botClient.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id,
+                text: MessageConstants.ACCESS_DENIED,
                 cancellationToken: cancellationToken);
             return;
         }
@@ -105,7 +106,7 @@ public class TelegramBotService(
 
         switch (model.Command)
         {
-            case Command.NO_MENTION_MODE_TEXT:
+            case CommandConstants.NO_MENTION_MODE_TEXT:
             {
                 if (bool.TryParse(model.Value, out var result))
                 {
@@ -113,8 +114,8 @@ public class TelegramBotService(
                 }
 
                 await cacheService.SetAsync(model.ChatId.ToString(), chatSettings);
-                await botClient.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id, text: Messages.SUCCESS,
-                    cancellationToken: cancellationToken);
+                await botClient.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id,
+                    text: MessageConstants.SUCCESS, cancellationToken: cancellationToken);
                 break;
             }
         }

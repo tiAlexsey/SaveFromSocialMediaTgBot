@@ -1,5 +1,5 @@
-using SaveFromSocialMediaTgBot.Abstract.Interface;
-using SaveFromSocialMediaTgBot.Data.Const;
+using SaveFromSocialMediaTgBot.Data.Constants;
+using SaveFromSocialMediaTgBot.Interfaces;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -12,7 +12,7 @@ public class TelegramBotWorker(
     IConfiguration configuration,
     ITelegramBotService telegramBotService) : BackgroundService
 {
-    private readonly TelegramBotClient client = new(configuration[Env.BOT_TOKEN] ?? throw new NullReferenceException());
+    private readonly TelegramBotClient client = new(configuration[EnvironmentConstants.BOT_TOKEN] ?? throw new NullReferenceException());
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

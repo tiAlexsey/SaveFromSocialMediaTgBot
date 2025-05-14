@@ -1,4 +1,4 @@
-namespace SaveFromSocialMediaTgBot.Data.Model;
+namespace SaveFromSocialMediaTgBot.Data.Models;
 
 public class ChatSettings
 {

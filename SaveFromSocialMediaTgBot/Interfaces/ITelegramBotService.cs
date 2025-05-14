@@ -1,7 +1,7 @@
 using Telegram.Bot;
 using Telegram.Bot.Types;
 
-namespace SaveFromSocialMediaTgBot.Abstract.Interface;
+namespace SaveFromSocialMediaTgBot.Interfaces;
 
 public interface ITelegramBotService
 {

@@ -1,4 +1,4 @@
-using SaveFromSocialMediaTgBot.Abstract.Interface;
+using SaveFromSocialMediaTgBot.Interfaces;
 
 namespace SaveFromSocialMediaTgBot.Services;
 

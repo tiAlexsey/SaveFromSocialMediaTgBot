@@ -1,13 +1,13 @@
 using System.Text.RegularExpressions;
-using SaveFromSocialMediaTgBot.Abstract.Interface;
-using SaveFromSocialMediaTgBot.Data.Const;
+using SaveFromSocialMediaTgBot.Data.Constants;
+using SaveFromSocialMediaTgBot.Interfaces;
 
 namespace SaveFromSocialMediaTgBot.Services.VideoScraper;
 
 public class TiktokVideoScraper(IConfiguration configuration, HttpClient client) : IVideoScraper
 {
-    private readonly int retryCount = int.TryParse(configuration[Env.RETRY_COUNT], out var count) ? count : 1;
-    private readonly Regex pattern = new(Pattern.TICKTOCK, RegexOptions.Compiled);
+    private readonly int retryCount = int.TryParse(configuration[EnvironmentConstants.RETRY_COUNT], out var count) ? count : 1;
+    private readonly Regex pattern = new(PatternConstants.TICKTOCK, RegexOptions.Compiled);
 
 
     public bool CanHandle(string url)
@@ -17,7 +17,7 @@ public class TiktokVideoScraper(IConfiguration configuration, HttpClient client)
     {
         var linkVideo = await GetVideoLinkAsync(client, pageUrl);
 
-        if (linkVideo is null) throw new FormatException(Messages.ERROR_EMPTY_URL);
+        if (linkVideo is null) throw new FormatException(MessageConstants.ERROR_EMPTY_URL);
 
         return await client.GetStreamAsync(linkVideo);
     }

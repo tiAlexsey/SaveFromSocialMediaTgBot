@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
-using SaveFromSocialMediaTgBot.Abstract.Interface;
-using SaveFromSocialMediaTgBot.Data.Const;
+using SaveFromSocialMediaTgBot.Data.Constants;
+using SaveFromSocialMediaTgBot.Interfaces;
 
 namespace SaveFromSocialMediaTgBot.Services;
 
@@ -24,7 +24,7 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
 
         if (result is null)
         {
-            throw new NullReferenceException($"{Messages.ERROR_EMPTY_FETCH_FUNC}: {fetchFunction.Method.Name}");
+            throw new NullReferenceException($"{MessageConstants.ERROR_EMPTY_FETCH_FUNC}: {fetchFunction.Method.Name}");
         }
         
         await SetAsync(key, result);
@@ -41,7 +41,7 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
         catch (JsonException ex)
         {
             logger.LogError(ex, ex.Message);
-            throw new InvalidOperationException($"{Messages.ERROR_SERIALIZE_VALUE} '{key}'", ex);
+            throw new InvalidOperationException($"{MessageConstants.ERROR_SERIALIZE_VALUE} '{key}'", ex);
         }
     }
 
@@ -57,7 +57,7 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
         catch (JsonException ex)
         {
             logger.LogError(ex, ex.Message);
-            throw new InvalidOperationException($"{Messages.ERROR_DESERIALIZE_VALUE} '{key}'", ex);
+            throw new InvalidOperationException($"{MessageConstants.ERROR_DESERIALIZE_VALUE} '{key}'", ex);
         }
     }
 
