@@ -7,7 +7,7 @@ using SaveFromSocialMediaTgBot.Services.VideoScraper;
 
 namespace SaveFromSocialMediaTgBot.Extensions;
 
-public static partial class DependencyInjections
+public static partial class AppBuilderExtension
 {
     private static void AddServices(this IServiceCollection services, IConfiguration configuration)
     {
