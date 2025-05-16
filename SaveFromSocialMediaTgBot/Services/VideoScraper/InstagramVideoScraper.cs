@@ -20,7 +20,7 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
         Args = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
     };
 
-    private static CookieParam[] Cookies { get; set; } = [];
+    private static CookieParam[]? Cookies { get; set; }
 
     public bool CanHandle(string url)
         => url.Contains("instagram.com", StringComparison.OrdinalIgnoreCase);
@@ -55,7 +55,7 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
                 match = pattern.Match(content);
                 if (!match.Success)
                 {
-                    await page.SetCookieAsync(await AuthorizationAsync());
+                    await page.SetCookieAsync(await AuthorizationAsync(page));
                     continue;
                 }
 
@@ -82,16 +82,13 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
         return null;
     }
 
-    private static async Task SetCookiesAsync(IPage page)
+    private async Task SetCookiesAsync(IPage page)
     {
-        await page.SetCookieAsync(Cookies);
+        await page.SetCookieAsync(Cookies ?? await AuthorizationAsync(page));
     }
 
-    private async Task<CookieParam[]> AuthorizationAsync()
+    private async Task<CookieParam[]> AuthorizationAsync(IPage page)
     {
-        await using var browser = await Puppeteer.LaunchAsync(launchOptions);
-        await using var page = await browser.NewPageAsync();
-
         // Переход на страницу входа Instagram
         await page.GoToAsync("https://www.instagram.com/accounts/login/");
 
