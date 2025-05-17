@@ -90,7 +90,8 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
     private async Task<CookieParam[]> AuthorizationAsync(IPage page)
     {
         // Переход на страницу входа Instagram
-        await page.GoToAsync("https://www.instagram.com/accounts/login/");
+        var response = await page.GoToAsync("https://www.instagram.com/accounts/login/");
+        Console.WriteLine(response.Status);
 
         // Ожидание появления полей ввода
         await page.WaitForSelectorAsync("input[name='username']");
