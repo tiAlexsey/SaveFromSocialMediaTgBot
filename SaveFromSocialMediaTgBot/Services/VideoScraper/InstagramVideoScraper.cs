@@ -17,7 +17,15 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
     {
         Headless = true,
         ExecutablePath = "/usr/bin/chromium",
-        Args = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+        Args =
+        [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-blink-features=AutomationControlled",
+            "--disable-infobars",
+            "--lang=en-US,en;q=0.9"
+        ]
     };
 
     private static CookieParam[]? Cookies { get; set; }
@@ -37,6 +45,17 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
         await using var browser = await Puppeteer.LaunchAsync(launchOptions);
         // Открываем новую страницу в браузере
         await using var page = await browser.NewPageAsync();
+
+        await page.EvaluateFunctionOnNewDocumentAsync(@"() => {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            window.chrome = { runtime: {} };
+            Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
+        }");
+
+        await page.SetUserAgentAsync(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36");
+
         // Ставим куки
         await SetCookiesAsync(page);
 
@@ -47,8 +66,8 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
             while (tryCount++ <= 1)
             {
                 // Переходим по URL
-                await page.GoToAsync(pageUrl, WaitUntilNavigation.Networkidle0);
-                await Task.Delay(random.Next(500, 1000));
+                await page.GoToAsync(pageUrl,
+                    new NavigationOptions { WaitUntil = [WaitUntilNavigation.DOMContentLoaded] });
                 // Выкачиваем html страницу
                 var content = await page.GetContentAsync();
 
@@ -89,9 +108,9 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
 
     private async Task<CookieParam[]> AuthorizationAsync(IPage page)
     {
-        await page.SetUserAgentAsync("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36");
         // Переход на страницу входа Instagram
-        var response = await page.GoToAsync("https://www.instagram.com/accounts/login/");
+        var response = await page.GoToAsync("https://www.instagram.com/accounts/login/",
+            new NavigationOptions { WaitUntil = [WaitUntilNavigation.DOMContentLoaded] });
         Console.WriteLine(response.Status);
 
         // Ожидание появления полей ввода
@@ -107,7 +126,7 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
         // Нажатие кнопки входа
         await page.ClickAsync("button[type='submit']");
         // Ждем авторизацию
-        await page.WaitForNavigationAsync(new NavigationOptions { WaitUntil = [WaitUntilNavigation.Networkidle0] });
+        await page.WaitForNavigationAsync(new NavigationOptions { WaitUntil = [WaitUntilNavigation.DOMContentLoaded] });
         await Task.Delay(random.Next(1000, 3000));
         Cookies = await page.GetCookiesAsync();
         return Cookies;
