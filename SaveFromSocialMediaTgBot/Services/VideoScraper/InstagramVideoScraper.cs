@@ -12,6 +12,8 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
     private readonly Regex pattern = new(PatternConstants.INSTAGRAM, RegexOptions.Compiled);
     private readonly string login = configuration[EnvironmentConstants.INST_LOGIN] ?? "";
     private readonly string password = configuration[EnvironmentConstants.INST_PASSWORD] ?? "";
+    private readonly NavigationOptions navigationOptions = new() { WaitUntil = [WaitUntilNavigation.DOMContentLoaded] };
+    private readonly TypeOptions typeOptions = new() { Delay = 150 };
 
     private readonly LaunchOptions launchOptions = new()
     {
@@ -41,54 +43,24 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
 
     private async Task<string?> TryGetVideoUrlAsync(string pageUrl)
     {
-        // Запускаем браузер в headless-режиме
         await using var browser = await Puppeteer.LaunchAsync(launchOptions);
-        // Открываем новую страницу в браузере
         await using var page = await browser.NewPageAsync();
+        await ConfigurePageAsync(page);
 
-        await page.EvaluateFunctionOnNewDocumentAsync(@"() => {
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-            window.chrome = { runtime: {} };
-            Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
-        }");
-
-        await page.SetUserAgentAsync(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36");
-
-        // Ставим куки
-        await SetCookiesAsync(page);
-
-        var tryCount = 0;
         try
         {
-            Match? match = null;
-            while (tryCount++ <= 1)
+            for (var i = 0; i < 2; i++)
             {
-                // Переходим по URL
-                await page.GoToAsync(pageUrl,
-                    new NavigationOptions { WaitUntil = [WaitUntilNavigation.DOMContentLoaded] });
-                // Выкачиваем html страницу
+                await page.GoToAsync(pageUrl, navigationOptions);
                 var content = await page.GetContentAsync();
+                var match = pattern.Match(content);
 
-                match = pattern.Match(content);
-                if (!match.Success)
-                {
+                if (match.Success)
+                    return match.Value.Trim('"').Replace("\\", "");
+
+                if (i == 0)
+                    // Повторная авторизация на случай, если текущие куки устарели
                     await page.SetCookieAsync(await AuthorizationAsync(page));
-                    continue;
-                }
-
-                tryCount++;
-            }
-
-            // Закрываем браузер
-            await browser.CloseAsync();
-
-            if (match!.Success)
-            {
-                return match.Value
-                    .Trim('"')
-                    .Replace("\\", "");
             }
         }
         catch
@@ -101,6 +73,19 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
         return null;
     }
 
+    private async Task ConfigurePageAsync(IPage page)
+    {
+        await page.SetUserAgentAsync(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36");
+        await page.EvaluateFunctionOnNewDocumentAsync(@"() => {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            window.chrome = { runtime: {} };
+            Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
+        }");
+        await SetCookiesAsync(page);
+    }
+
     private async Task SetCookiesAsync(IPage page)
     {
         await page.SetCookieAsync(Cookies ?? await AuthorizationAsync(page));
@@ -108,26 +93,20 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
 
     private async Task<CookieParam[]> AuthorizationAsync(IPage page)
     {
-        // Переход на страницу входа Instagram
-        var response = await page.GoToAsync("https://www.instagram.com/accounts/login/",
-            new NavigationOptions { WaitUntil = [WaitUntilNavigation.DOMContentLoaded] });
-        Console.WriteLine(response.Status);
+        await page.GoToAsync("https://www.instagram.com/accounts/login/", navigationOptions);
 
-        // Ожидание появления полей ввода
         await page.WaitForSelectorAsync("input[name='username']");
         await page.WaitForSelectorAsync("input[name='password']");
-
         await Task.Delay(random.Next(800, 1000));
-        // Ввод данных
-        await page.TypeAsync("input[name='username']", login, new TypeOptions { Delay = 150 });
-        await Task.Delay(random.Next(500, 1000));
-        await page.TypeAsync("input[name='password']", password, new TypeOptions { Delay = 150 });
 
-        // Нажатие кнопки входа
+        await page.TypeAsync("input[name='username']", login, typeOptions);
+        await Task.Delay(random.Next(500, 1000));
+        await page.TypeAsync("input[name='password']", password, typeOptions);
+        await Task.Delay(random.Next(500, 1000));
+
         await page.ClickAsync("button[type='submit']");
-        // Ждем авторизацию
-        await page.WaitForNavigationAsync(new NavigationOptions { WaitUntil = [WaitUntilNavigation.DOMContentLoaded] });
-        await Task.Delay(random.Next(1000, 3000));
+        await page.WaitForNavigationAsync(navigationOptions);
+
         Cookies = await page.GetCookiesAsync();
         return Cookies;
     }
