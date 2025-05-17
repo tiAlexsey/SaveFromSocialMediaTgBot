@@ -89,9 +89,6 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
 
     private async Task<CookieParam[]> AuthorizationAsync(IPage page)
     {
-        // Пустая кука сессии
-        await page.SetCookieAsync(new CookieParam
-            { Name = "sessionId", Value = string.Empty, Domain = ".instagram.com" });
         // Переход на страницу входа Instagram
         await page.GoToAsync("https://www.instagram.com/accounts/login/");
 
