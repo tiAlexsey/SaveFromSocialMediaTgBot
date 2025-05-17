@@ -89,6 +89,7 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
 
     private async Task<CookieParam[]> AuthorizationAsync(IPage page)
     {
+        await page.SetUserAgentAsync("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36");
         // Переход на страницу входа Instagram
         var response = await page.GoToAsync("https://www.instagram.com/accounts/login/");
         Console.WriteLine(response.Status);
