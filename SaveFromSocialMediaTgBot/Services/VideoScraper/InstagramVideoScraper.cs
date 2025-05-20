@@ -15,6 +15,9 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
     private readonly NavigationOptions navigationOptions = new() { WaitUntil = [WaitUntilNavigation.DOMContentLoaded] };
     private readonly TypeOptions typeOptions = new() { Delay = 150 };
 
+    private const string USER_AGENT_VALUE =
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 319.0.0.0.35 (iPhone16,2; iOS 18_1_0; en_US; en-US; scale=3.00; 1170x2532; 524874005)";
+
     private readonly LaunchOptions launchOptions = new()
     {
         Headless = true,
@@ -45,10 +48,9 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
     {
         await using var browser = await Puppeteer.LaunchAsync(launchOptions);
         await using var page = await browser.NewPageAsync();
-        await ConfigurePageAsync(page);
-
         try
         {
+            await ConfigurePageAsync(page);
             for (var i = 0; i < 2; i++)
             {
                 await page.GoToAsync(pageUrl, navigationOptions);
@@ -75,14 +77,7 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
 
     private async Task ConfigurePageAsync(IPage page)
     {
-        await page.SetUserAgentAsync(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36");
-        await page.EvaluateFunctionOnNewDocumentAsync(@"() => {
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-            window.chrome = { runtime: {} };
-            Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
-        }");
+        await page.SetUserAgentAsync(USER_AGENT_VALUE);
         await SetCookiesAsync(page);
     }
 
