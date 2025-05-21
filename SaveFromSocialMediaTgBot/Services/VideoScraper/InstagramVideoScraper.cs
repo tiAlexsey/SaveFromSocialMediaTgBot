@@ -12,25 +12,15 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
     private readonly Regex pattern = new(PatternConstants.INSTAGRAM, RegexOptions.Compiled);
     private readonly string login = configuration[EnvironmentConstants.INST_LOGIN] ?? "";
     private readonly string password = configuration[EnvironmentConstants.INST_PASSWORD] ?? "";
+    private string sessionId = configuration[EnvironmentConstants.INST_COOKIE_SESSION_ID] ?? "";
     private readonly NavigationOptions navigationOptions = new() { WaitUntil = [WaitUntilNavigation.DOMContentLoaded] };
     private readonly TypeOptions typeOptions = new() { Delay = 150 };
-
-    private const string USER_AGENT_VALUE =
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 319.0.0.0.35 (iPhone16,2; iOS 18_1_0; en_US; en-US; scale=3.00; 1170x2532; 524874005)";
 
     private readonly LaunchOptions launchOptions = new()
     {
         Headless = true,
         ExecutablePath = "/usr/bin/chromium",
-        Args =
-        [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-blink-features=AutomationControlled",
-            "--disable-infobars",
-            "--lang=en-US,en;q=0.9"
-        ]
+        Args = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
     };
 
     private static CookieParam[]? Cookies { get; set; }
@@ -50,7 +40,7 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
         await using var page = await browser.NewPageAsync();
         try
         {
-            await ConfigurePageAsync(page);
+            await SetCookiesAsync(page);
             for (var i = 0; i < 2; i++)
             {
                 await page.GoToAsync(pageUrl, navigationOptions);
@@ -75,20 +65,28 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
         return null;
     }
 
-    private async Task ConfigurePageAsync(IPage page)
-    {
-        await page.SetUserAgentAsync(USER_AGENT_VALUE);
-        await SetCookiesAsync(page);
-    }
-
     private async Task SetCookiesAsync(IPage page)
     {
-        await page.SetCookieAsync(Cookies ?? await AuthorizationAsync(page));
+        if (!string.IsNullOrWhiteSpace(sessionId))
+        {
+            Cookies =
+            [
+                new CookieParam
+                {
+                    Name = "sessionid",
+                    Value = sessionId,
+                    Domain = ".instagram.com"
+                }
+            ];
+            sessionId = string.Empty;
+        }
+
+        await page.SetCookieAsync(Cookies);
     }
 
     private async Task<CookieParam[]> AuthorizationAsync(IPage page)
     {
-        await page.GoToAsync("https://www.instagram.com/accounts/login/", navigationOptions);
+        await page.GoToAsync("https://www.instagram.com/accounts/login/");
 
         await page.WaitForSelectorAsync("input[name='username']");
         await page.WaitForSelectorAsync("input[name='password']");
