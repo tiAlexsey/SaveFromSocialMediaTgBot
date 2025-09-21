@@ -61,8 +61,9 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
                     await page.SetCookieAsync(await AuthorizationAsync(page));
             }
         }
-        catch
+        catch (Exception e)
         {
+            Console.WriteLine(e + e.Message);
             var fileName = $"Screenshot-{Regex.Match(pageUrl, "igsh=[^&]+")}.png";
             Console.WriteLine(fileName);
             await page.ScreenshotAsync(fileName);
