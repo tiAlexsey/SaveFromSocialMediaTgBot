@@ -42,9 +42,10 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
             await SetCookiesAsync(page);
             for (var i = 0; i < 2; i++)
             {
+                Console.WriteLine("Try to go to the page");
                 await page.GoToAsync(pageUrl, navigationOptions);
                 
-                var fileName = $"Screenshot-i-{Regex.Match(pageUrl, "igsh=[^&]+")}.png";
+                var fileName = $"Screenshot-{i}-{Regex.Match(pageUrl, "igsh=[^&]+")}.png";
                 Console.WriteLine(fileName);
                 await page.ScreenshotAsync(fileName);
                 
@@ -72,6 +73,8 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
 
     private async Task SetCookiesAsync(IPage page)
     {
+        Console.WriteLine("Try set Cookies");
+        
         if (!string.IsNullOrWhiteSpace(sessionId))
         {
             Cookies =
@@ -87,6 +90,8 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
         }
 
         await page.SetCookieAsync(Cookies);
+        
+        Console.WriteLine("Cookies set");
     }
 
     private async Task<CookieParam[]> AuthorizationAsync(IPage page)
