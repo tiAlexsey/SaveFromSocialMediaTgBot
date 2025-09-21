@@ -45,6 +45,10 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
                 await page.GoToAsync(pageUrl, navigationOptions);
                 var content = await page.GetContentAsync();
                 var match = pattern.Match(content);
+                
+                var fileName = $"Screenshot-i-{Regex.Match(pageUrl, "igsh=[^&]+")}.png";
+                Console.WriteLine(fileName);
+                await page.ScreenshotAsync(fileName);
 
                 if (match.Success)
                     return match.Value.Trim('"').Replace("\\", "");
