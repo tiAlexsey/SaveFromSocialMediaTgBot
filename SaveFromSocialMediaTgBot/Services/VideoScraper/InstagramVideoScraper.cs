@@ -13,7 +13,12 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
     private readonly string login = configuration[EnvironmentConstants.INST_LOGIN] ?? "";
     private readonly string password = configuration[EnvironmentConstants.INST_PASSWORD] ?? "";
     private string sessionId = configuration[EnvironmentConstants.INST_COOKIE_SESSION_ID] ?? "";
-    private readonly NavigationOptions navigationOptions = new() { WaitUntil = [WaitUntilNavigation.DOMContentLoaded] };
+    private readonly NavigationOptions navigationOptions = new()
+    {
+        WaitUntil = [WaitUntilNavigation.DOMContentLoaded],
+        Referer = "https://www.instagram.com/",
+        ReferrerPolicy = "strict-origin-when-cross-origin"
+    };
     private readonly TypeOptions typeOptions = new() { Delay = 150 };
 
     private readonly LaunchOptions launchOptions = new()
@@ -43,7 +48,7 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
             for (var i = 0; i < 2; i++)
             {
                 Console.WriteLine("Try to go to the page");
-                await page.GoToAsync(pageUrl);
+                await page.GoToAsync(pageUrl, navigationOptions);
 
                 var fileName = $"Screenshot-{i}-{Regex.Match(pageUrl, "igsh=[^&]+")}.png";
                 Console.WriteLine(fileName);
