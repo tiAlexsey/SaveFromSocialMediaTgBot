@@ -5,6 +5,6 @@ namespace SaveFromSocialMediaTgBot.Interfaces;
 
 public interface ITelegramBotService
 {
-    Task UpdateMessageWorkflowAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken);
-    Task UpdateCallbackWorkflowAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken);
+    Task UpdateWorkflowAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken);
+    Task CallbackWorkflowAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken);
 }

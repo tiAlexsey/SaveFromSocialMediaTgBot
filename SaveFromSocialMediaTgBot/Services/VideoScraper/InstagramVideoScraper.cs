@@ -25,8 +25,7 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
 
     private static CookieParam[]? Cookies { get; set; }
 
-    public bool CanHandle(string url)
-        => url.Contains("instagram.com", StringComparison.OrdinalIgnoreCase);
+    public bool CanHandle(string url) => url.Contains("instagram.com", StringComparison.OrdinalIgnoreCase);
 
     public async Task<Stream> GetVideoStreamAsync(string url)
     {

@@ -6,20 +6,24 @@ namespace SaveFromSocialMediaTgBot.Services.VideoScraper;
 
 public class TiktokVideoScraper(IConfiguration configuration, HttpClient client) : IVideoScraper
 {
-    private readonly int retryCount = int.TryParse(configuration[EnvironmentConstants.RETRY_COUNT], out var count) ? count : 1;
+    private readonly int retryCount =
+        int.TryParse(configuration[EnvironmentConstants.RETRY_COUNT], out var count) ? count : 1;
+
     private readonly Regex pattern = new(PatternConstants.TICKTOCK, RegexOptions.Compiled);
 
-
-    public bool CanHandle(string url)
-        => url.Contains("tiktok", StringComparison.OrdinalIgnoreCase);
+    public bool CanHandle(string url) => url.Contains("tiktok", StringComparison.OrdinalIgnoreCase);
 
     public async Task<Stream> GetVideoStreamAsync(string pageUrl)
     {
-        var linkVideo = await GetVideoLinkAsync(client, pageUrl);
+        var linkVideo = await GetVideoLinkAsync(client, pageUrl) ??
+                        throw new FormatException(MessageConstants.ERROR_EMPTY_URL);
 
-        if (linkVideo is null) throw new FormatException(MessageConstants.ERROR_EMPTY_URL);
+        var request = new HttpRequestMessage(HttpMethod.Get, linkVideo) { Headers = { Referrer = new Uri(pageUrl) } };
 
-        return await client.GetStreamAsync(linkVideo);
+        var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadAsStreamAsync();
     }
 
     private async Task<string?> GetVideoLinkAsync(HttpClient httpClient, string pageUrl)

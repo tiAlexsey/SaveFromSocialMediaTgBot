@@ -53,9 +53,8 @@ public class TwitterVideoScraper(IConfiguration configuration, HttpClient client
         { "creator_subscriptions_tweet_preview_api_enabled", true },
     };
 
-    public bool CanHandle(string url)
-        => url.Contains("twitter", StringComparison.OrdinalIgnoreCase) ||
-           url.Contains("x.com", StringComparison.OrdinalIgnoreCase);
+    public bool CanHandle(string url) => url.Contains("twitter", StringComparison.OrdinalIgnoreCase) ||
+                                         url.Contains("x.com", StringComparison.OrdinalIgnoreCase);
 
     public async Task<Stream> GetVideoStreamAsync(string url)
     {
@@ -75,11 +74,11 @@ public class TwitterVideoScraper(IConfiguration configuration, HttpClient client
             $"https://x.com/i/api/graphql/2ICDjqPd81tulZcYrtpTuQ/TweetResultByRestId?variables={Uri.EscapeDataString(query)}&features={Uri.EscapeDataString(feat)}";
         var response = await client.GetAsync(url);
         response.EnsureSuccessStatusCode();
-        
+
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var media = json.RootElement.GetProperty("data").GetProperty("tweetResult").GetProperty("result")
             .GetProperty("legacy").GetProperty("entities").GetProperty("media");
-        
+
         var videoUrls = new List<string>();
         foreach (var item in media.EnumerateArray())
         {

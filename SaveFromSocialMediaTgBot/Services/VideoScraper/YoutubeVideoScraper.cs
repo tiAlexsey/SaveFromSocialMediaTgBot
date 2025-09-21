@@ -11,8 +11,7 @@ public class YoutubeVideoScraper(HttpClient client) : IVideoScraper
     private const string USER_AGENT = "User-Agent";
     private const string USER_AGENT_VALUE = "com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X; US)";
 
-    public bool CanHandle(string url)
-        => url.Contains("youtube.com/shorts", StringComparison.OrdinalIgnoreCase);
+    public bool CanHandle(string url) => url.Contains("youtube.com/shorts", StringComparison.OrdinalIgnoreCase);
 
     public async Task<Stream> GetVideoStreamAsync(string url)
     {

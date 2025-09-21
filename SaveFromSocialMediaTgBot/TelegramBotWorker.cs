@@ -1,4 +1,4 @@
-using SaveFromSocialMediaTgBot.Data.Constants;
+using SaveFromSocialMediaTgBot.Exceptions;
 using SaveFromSocialMediaTgBot.Interfaces;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
@@ -9,11 +9,9 @@ namespace SaveFromSocialMediaTgBot;
 
 public class TelegramBotWorker(
     ILogger<TelegramBotWorker> logger,
-    IConfiguration configuration,
+    ITelegramBotClient client,
     ITelegramBotService telegramBotService) : BackgroundService
 {
-    private readonly TelegramBotClient client = new(configuration[EnvironmentConstants.BOT_TOKEN] ?? throw new NullReferenceException());
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         client.StartReceiving(
@@ -32,14 +30,19 @@ public class TelegramBotWorker(
             switch (update)
             {
                 case { Type: UpdateType.CallbackQuery }:
-                    await telegramBotService.UpdateCallbackWorkflowAsync(botClient, update, cancellationToken);
+                    await telegramBotService.CallbackWorkflowAsync(botClient, update, cancellationToken);
                     return;
                 case { Type: UpdateType.Message, Message.Type: MessageType.Text }:
-                    await telegramBotService.UpdateMessageWorkflowAsync(botClient, update, cancellationToken);
+                    await telegramBotService.UpdateWorkflowAsync(botClient, update, cancellationToken);
                     return;
                 default:
                     return;
             }
+        }
+        catch (InvalidUrlException ex)
+        {
+            await botClient.SetMessageReaction(update.Message!.Chat.Id, update.Message.Id, [],
+                cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {

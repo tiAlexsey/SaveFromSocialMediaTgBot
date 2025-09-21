@@ -13,11 +13,11 @@ public class TelegramBotService(
     ICacheService cacheService,
     ILogger<TelegramBotService> logger) : ITelegramBotService
 {
-    public async Task UpdateMessageWorkflowAsync(ITelegramBotClient botClient, Update update,
+    public async Task UpdateWorkflowAsync(ITelegramBotClient botClient, Update update,
         CancellationToken cancellationToken)
     {
         var chatSettings = await cacheService.GetOrCreateAsync(update.Message!.Chat.Id.ToString(),
-            async () => new ChatSettings());
+            async () => new ChatSettings(), cancellationToken);
         var botInfo = await botClient.GetMe(cancellationToken: cancellationToken);
         var message = new ParsedMessage(update.Message, botInfo.Username!, chatSettings);
 
@@ -34,7 +34,7 @@ public class TelegramBotService(
         }
     }
 
-    public async Task UpdateCallbackWorkflowAsync(ITelegramBotClient botClient, Update update,
+    public async Task CallbackWorkflowAsync(ITelegramBotClient botClient, Update update,
         CancellationToken cancellationToken)
     {
         await ProcessCallbackAsync(botClient, update, cancellationToken);
@@ -42,7 +42,7 @@ public class TelegramBotService(
             update.CallbackQuery.Message.MessageId, cancellationToken);
     }
 
-    private async Task ProcessLinkMessageAsync(ITelegramBotClient botClient, ParsedMessage message,
+    private async Task ProcessLinkAsync(ITelegramBotClient botClient, ParsedMessage message,
         CancellationToken cancellationToken)
     {
         await botClient.SetMessageReaction(message.ChatId, message.Id, ["\ud83d\udc40"],
@@ -102,7 +102,7 @@ public class TelegramBotService(
         }
 
         var chatSettings = await cacheService.GetOrCreateAsync(model.ChatId.ToString(),
-            async () => new ChatSettings());
+            async () => new ChatSettings(), cancellationToken);
 
         switch (model.Command)
         {
@@ -141,11 +141,11 @@ public class TelegramBotService(
                 if (message.Settings.NeedMention && !message.IsBotMention)
                     break;
 
-                await ProcessLinkMessageAsync(botClient, message, cancellationToken);
+                await ProcessLinkAsync(botClient, message, cancellationToken);
                 break;
             }
             case ChatType.Private:
-                await ProcessLinkMessageAsync(botClient, message, cancellationToken);
+                await ProcessLinkAsync(botClient, message, cancellationToken);
                 break;
             default:
                 return;

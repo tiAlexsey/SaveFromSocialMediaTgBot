@@ -7,14 +7,11 @@ namespace SaveFromSocialMediaTgBot.Services;
 
 public class CacheService(IDistributedCache cache, ILogger<CacheService> logger) : ICacheService
 {
-    private readonly JsonSerializerOptions _jsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
+    private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> fetchFunction)
+    public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> fetchFunction, CancellationToken cancellationToken = default)
     {
-        var cached = await GetAsync<T>(key);
+        var cached = await GetAsync<T>(key, cancellationToken);
         if (cached != null)
         {
             return cached;
@@ -26,17 +23,17 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
         {
             throw new NullReferenceException($"{MessageConstants.ERROR_EMPTY_FETCH_FUNC}: {fetchFunction.Method.Name}");
         }
-        
+
         await SetAsync(key, result);
         return result;
     }
 
-    public async Task SetAsync<T>(string key, T value)
+    public async Task SetAsync<T>(string key, T value, CancellationToken cancellationToken = default)
     {
         try
         {
             var serialized = JsonSerializer.Serialize(value, _jsonOptions);
-            await cache.SetStringAsync(key, serialized, new DistributedCacheEntryOptions());
+            await cache.SetStringAsync(key, serialized, new DistributedCacheEntryOptions(), token: cancellationToken);
         }
         catch (JsonException ex)
         {
@@ -45,11 +42,11 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
         }
     }
 
-    private async Task<T?> GetAsync<T>(string key)
+    private async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
         try
         {
-            var serialized = await cache.GetStringAsync(key);
+            var serialized = await cache.GetStringAsync(key, cancellationToken);
             return string.IsNullOrWhiteSpace(serialized)
                 ? default
                 : JsonSerializer.Deserialize<T>(serialized, _jsonOptions);
