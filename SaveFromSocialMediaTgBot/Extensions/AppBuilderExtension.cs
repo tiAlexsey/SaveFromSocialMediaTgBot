@@ -39,10 +39,10 @@ public static class AppBuilderExtension
         services.AddSingleton<ICacheService, CacheService>();
     }
 
-    private async static void AddVideoScrapers(this IServiceCollection services)
+    private static void AddVideoScrapers(this IServiceCollection services)
     {
         // Puppeteer client for instagram
-        await new BrowserFetcher().DownloadAsync();
+        _ = new BrowserFetcher().DownloadAsync().Result;
 
         services.AddHttpClient<IVideoScraper, InstagramVideoScraper>();
         services.AddHttpClient<IVideoScraper, TwitterVideoScraper>();
