@@ -42,7 +42,7 @@ public static class AppBuilderExtension
     private static void AddVideoScrapers(this IServiceCollection services)
     {
         // Puppeteer client for instagram
-        new BrowserFetcher(SupportedBrowser.ChromeHeadlessShell).DownloadAsync();
+        new BrowserFetcher().DownloadAsync();
 
         services.AddHttpClient<IVideoScraper, InstagramVideoScraper>();
         services.AddHttpClient<IVideoScraper, TwitterVideoScraper>();

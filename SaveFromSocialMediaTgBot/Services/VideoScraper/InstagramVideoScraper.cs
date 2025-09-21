@@ -13,12 +13,7 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
     private readonly string login = configuration[EnvironmentConstants.INST_LOGIN] ?? "";
     private readonly string password = configuration[EnvironmentConstants.INST_PASSWORD] ?? "";
     private string sessionId = configuration[EnvironmentConstants.INST_COOKIE_SESSION_ID] ?? "";
-    private readonly NavigationOptions navigationOptions = new()
-    {
-        WaitUntil = [WaitUntilNavigation.DOMContentLoaded],
-        Referer = "https://www.instagram.com/",
-        ReferrerPolicy = "strict-origin-when-cross-origin"
-    };
+    private readonly NavigationOptions navigationOptions = new() { WaitUntil = [WaitUntilNavigation.DOMContentLoaded] };
     private readonly TypeOptions typeOptions = new() { Delay = 150 };
 
     private readonly LaunchOptions launchOptions = new()
