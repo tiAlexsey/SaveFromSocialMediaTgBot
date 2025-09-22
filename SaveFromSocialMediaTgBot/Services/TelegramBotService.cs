@@ -41,13 +41,14 @@ public class TelegramBotService(
         var model = new
         {
             ChatId = update.CallbackQuery.Message!.Chat.Id,
+            ChatType = update.CallbackQuery.Message!.Chat.Type,
             UserId = update.CallbackQuery.From.Id,
             Command = parts.Length > 0 ? parts[0] : string.Empty,
             Value = parts.Length > 1 ? parts[1] : string.Empty,
             MessageId = update.CallbackQuery.Message!.MessageId
         };
 
-        if (!await IsAllowSettingsAsync(client, model.ChatId, model.UserId, ct))
+        if (!await IsAllowSettingsAsync(client, model.ChatId, model.UserId, model.ChatType, ct))
         {
             await client.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id,
                 text: MessageConstants.ACCESS_DENIED,
@@ -125,7 +126,7 @@ public class TelegramBotService(
 
     private async Task ProcessBotCommandAsync(ITelegramBotClient client, ParsedMessage message, CancellationToken ct)
     {
-        if (!await IsAllowSettingsAsync(client, message.ChatId, message.UserId, ct))
+        if (!await IsAllowSettingsAsync(client, message.ChatId, message.UserId, message.ChatType, ct))
         {
             await client.DeleteMessage(message.ChatId, message.Id, ct);
             return;
@@ -135,7 +136,8 @@ public class TelegramBotService(
 
         switch (message.BotCommand)
         {
-            case var command when command == $"{CommandConstants.SETTINGS}@{botInfo.Username}":
+            case var command when command == $"{CommandConstants.SETTINGS}@{botInfo.Username}" ||
+                                  command == $"{CommandConstants.SETTINGS}" & message.ChatType == ChatType.Private:
             {
                 await client.SendMessage(
                     chatId: message.ChatId,
@@ -151,11 +153,12 @@ public class TelegramBotService(
         }
     }
 
-    private async Task<bool> IsAllowSettingsAsync(ITelegramBotClient client, long chatId, long userId, 
-        CancellationToken ct)
+    private async Task<bool> IsAllowSettingsAsync(ITelegramBotClient client, long chatId, long userId,
+        ChatType chatType, CancellationToken ct)
     {
         var member = await client.GetChatMember(chatId, userId, ct);
-        return member.Status is ChatMemberStatus.Creator or ChatMemberStatus.Administrator;
+        return member.Status is ChatMemberStatus.Creator or ChatMemberStatus.Administrator 
+               || chatType == ChatType.Private;
     }
 
     private async Task LinkHandlerAsync(ITelegramBotClient client, ParsedMessage message, CancellationToken ct)
@@ -166,6 +169,7 @@ public class TelegramBotService(
         {
             case ChatType.Group:
             case ChatType.Supergroup:
+            case ChatType.Private:
             {
                 if (message.Settings.Mention && !message.IsBotMention)
                     break;
@@ -173,9 +177,6 @@ public class TelegramBotService(
                 await ProcessLinkAsync(client, message, ct);
                 break;
             }
-            case ChatType.Private:
-                await ProcessLinkAsync(client, message, ct);
-                break;
             default:
                 return;
         }
