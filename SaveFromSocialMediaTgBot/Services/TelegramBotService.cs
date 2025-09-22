@@ -1,10 +1,10 @@
 using SaveFromSocialMediaTgBot.Data.Constants;
 using SaveFromSocialMediaTgBot.Data.Models;
+using SaveFromSocialMediaTgBot.Extensions;
 using SaveFromSocialMediaTgBot.Interfaces;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.ReplyMarkups;
 
 namespace SaveFromSocialMediaTgBot.Services;
 
@@ -13,123 +13,152 @@ public class TelegramBotService(
     ICacheService cacheService,
     ILogger<TelegramBotService> logger) : ITelegramBotService
 {
-    public async Task UpdateWorkflowAsync(ITelegramBotClient botClient, Update update,
-        CancellationToken cancellationToken)
+    public async Task UpdateWorkflowAsync(ITelegramBotClient client, Update update, CancellationToken ct)
     {
         var chatSettings = await cacheService.GetOrCreateAsync(update.Message!.Chat.Id.ToString(),
-            async () => new ChatSettings(), cancellationToken);
-        var botInfo = await botClient.GetMe(cancellationToken: cancellationToken);
+            async () => new ChatSettings(), ct);
+        var botInfo = await client.GetMe(cancellationToken: ct);
         var message = new ParsedMessage(update.Message, botInfo.Username!, chatSettings);
 
         switch (message.Type)
         {
             case MessageEntityType.BotCommand:
-                await ProcessBotCommandAsync(botClient, message, cancellationToken);
+                await ProcessBotCommandAsync(client, message, ct);
                 return;
             case MessageEntityType.Url:
-                await LinkHandlerAsync(botClient, message, cancellationToken);
+                await LinkHandlerAsync(client, message, ct);
                 return;
             default:
                 return;
         }
     }
 
-    public async Task CallbackWorkflowAsync(ITelegramBotClient botClient, Update update,
-        CancellationToken cancellationToken)
+    public async Task CallbackWorkflowAsync(ITelegramBotClient client, Update update, CancellationToken ct)
     {
-        await ProcessCallbackAsync(botClient, update, cancellationToken);
-        await botClient.DeleteMessage(new ChatId(update.CallbackQuery!.Message!.Chat.Id),
-            update.CallbackQuery.Message.MessageId, cancellationToken);
-    }
+        var data = update.CallbackQuery!.Data ?? string.Empty;
+        var parts = data.Split(':', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-    private async Task ProcessLinkAsync(ITelegramBotClient botClient, ParsedMessage message,
-        CancellationToken cancellationToken)
-    {
-        await botClient.SetMessageReaction(message.ChatId, message.Id, ["\ud83d\udc40"],
-            cancellationToken: cancellationToken);
-        var videoStream = await scraperService.GetVideoStreamAsync(message.VideoLink!);
-        await botClient.SendVideo(chatId: message.ChatId, video: videoStream, cancellationToken: cancellationToken);
-        await botClient.SetMessageReaction(message.ChatId, message.Id, ["\ud83d\udcaf"],
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task ProcessBotCommandAsync(ITelegramBotClient botClient, ParsedMessage message,
-        CancellationToken cancellationToken)
-    {
-        if (!await IsAllowSettingsAsync(botClient, message.ChatId, message.UserId, cancellationToken))
-        {
-            await botClient.DeleteMessage(message.ChatId, message.Id, cancellationToken);
-            return;
-        }
-
-        var botInfo = await botClient.GetMe(cancellationToken: cancellationToken);
-        switch (message.BotCommand)
-        {
-            case var command when command == $"{CommandConstants.NO_MENTION_MODE_COMMAND}@{botInfo.Username}":
-            {
-                var keyboard = new InlineKeyboardMarkup([
-                    [
-                        InlineKeyboardButton.WithCallbackData(ButtonConstants.TURN_ON, true.ToString()),
-                        InlineKeyboardButton.WithCallbackData(ButtonConstants.TURN_OFF, false.ToString())
-                    ]
-                ]);
-                await botClient.SendMessage(chatId: message.ChatId, text: CommandConstants.NO_MENTION_MODE_TEXT,
-                    replyMarkup: keyboard, cancellationToken: cancellationToken);
-                await botClient.DeleteMessage(chatId: message.ChatId, messageId: message.Id,
-                    cancellationToken: cancellationToken);
-                break;
-            }
-        }
-    }
-
-    private async Task ProcessCallbackAsync(ITelegramBotClient botClient, Update update,
-        CancellationToken cancellationToken)
-    {
         var model = new
         {
-            ChatId = update.CallbackQuery!.Message!.Chat.Id,
+            ChatId = update.CallbackQuery.Message!.Chat.Id,
             UserId = update.CallbackQuery.From.Id,
-            Command = update.CallbackQuery.Message?.Text,
-            Value = update.CallbackQuery.Data,
+            Command = parts.Length > 0 ? parts[0] : string.Empty,
+            Value = parts.Length > 1 ? parts[1] : string.Empty,
+            MessageId = update.CallbackQuery.Message!.MessageId
         };
 
-        if (!await IsAllowSettingsAsync(botClient, model.ChatId, model.UserId, cancellationToken))
+        if (!await IsAllowSettingsAsync(client, model.ChatId, model.UserId, ct))
         {
-            await botClient.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id,
+            await client.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id,
                 text: MessageConstants.ACCESS_DENIED,
-                cancellationToken: cancellationToken);
+                cancellationToken: ct);
             return;
         }
 
         var chatSettings = await cacheService.GetOrCreateAsync(model.ChatId.ToString(),
-            async () => new ChatSettings(), cancellationToken);
+            async () => new ChatSettings(), ct);
+
+        var changed = false;
 
         switch (model.Command)
         {
-            case CommandConstants.NO_MENTION_MODE_TEXT:
+            case CommandConstants.CLOSE_SETTINGS:
+            {
+                await client.DeleteMessage(chatId: model.ChatId, messageId: model.MessageId,
+                    cancellationToken: ct);
+                break;
+            }
+
+            case CommandConstants.NOTIFICATION_MODE:
             {
                 if (bool.TryParse(model.Value, out var result))
                 {
-                    chatSettings.NeedMention = result;
+                    chatSettings.Notification = result;
+                    changed = true;
                 }
 
-                await cacheService.SetAsync(model.ChatId.ToString(), chatSettings);
-                await botClient.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id,
-                    text: MessageConstants.SUCCESS, cancellationToken: cancellationToken);
+                await cacheService.SetAsync(model.ChatId.ToString(), chatSettings, ct);
+                await client.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id,
+                    text: MessageConstants.SUCCESS, cancellationToken: ct);
+                break;
+            }
+
+            case CommandConstants.MENTION_MODE:
+            {
+                if (bool.TryParse(model.Value, out var result))
+                {
+                    chatSettings.Mention = result;
+                    changed = true;
+                }
+
+                await cacheService.SetAsync(model.ChatId.ToString(), chatSettings, ct);
+                await client.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id,
+                    text: MessageConstants.SUCCESS, cancellationToken: ct);
+                break;
+            }
+            
+            case CommandConstants.DELETE_ORIGIN_MESSAGE:
+            {
+                if (bool.TryParse(model.Value, out var result))
+                {
+                    chatSettings.DeleteOriginMessage = result;
+                    changed = true;
+                }
+
+                await cacheService.SetAsync(model.ChatId.ToString(), chatSettings, ct);
+                await client.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id,
+                    text: MessageConstants.SUCCESS, cancellationToken: ct);
+                break;
+            }
+        }
+
+        if (changed)
+        {
+            await client.EditMessageText(
+                chatId: model.ChatId,
+                messageId: model.MessageId,
+                text: chatSettings.BuildSettingsText(),
+                replyMarkup: chatSettings.BuildSettingsKeyboard(),
+                cancellationToken: ct);
+        }
+    }
+
+    private async Task ProcessBotCommandAsync(ITelegramBotClient client, ParsedMessage message, CancellationToken ct)
+    {
+        if (!await IsAllowSettingsAsync(client, message.ChatId, message.UserId, ct))
+        {
+            await client.DeleteMessage(message.ChatId, message.Id, ct);
+            return;
+        }
+
+        var botInfo = await client.GetMe(cancellationToken: ct);
+
+        switch (message.BotCommand)
+        {
+            case var command when command == $"{CommandConstants.SETTINGS}@{botInfo.Username}":
+            {
+                await client.SendMessage(
+                    chatId: message.ChatId,
+                    text: message.Settings.BuildSettingsText(),
+                    replyMarkup: message.Settings.BuildSettingsKeyboard(),
+                    cancellationToken: ct);
+
+                await client.DeleteMessage(chatId: message.ChatId, messageId: message.Id,
+                    cancellationToken: ct);
+
                 break;
             }
         }
     }
 
-    private static async Task<bool> IsAllowSettingsAsync(ITelegramBotClient botClient, long chatId, long userId,
-        CancellationToken cancellationToken)
+    private async Task<bool> IsAllowSettingsAsync(ITelegramBotClient client, long chatId, long userId, 
+        CancellationToken ct)
     {
-        var member = await botClient.GetChatMember(chatId, userId, cancellationToken);
+        var member = await client.GetChatMember(chatId, userId, ct);
         return member.Status is ChatMemberStatus.Creator or ChatMemberStatus.Administrator;
     }
 
-    private async Task LinkHandlerAsync(ITelegramBotClient botClient, ParsedMessage message,
-        CancellationToken cancellationToken)
+    private async Task LinkHandlerAsync(ITelegramBotClient client, ParsedMessage message, CancellationToken ct)
     {
         logger.LogInformation($"Received message to bot. ChatId: {message.ChatId}. Message: {message.Text}");
 
@@ -138,17 +167,37 @@ public class TelegramBotService(
             case ChatType.Group:
             case ChatType.Supergroup:
             {
-                if (message.Settings.NeedMention && !message.IsBotMention)
+                if (message.Settings.Mention && !message.IsBotMention)
                     break;
 
-                await ProcessLinkAsync(botClient, message, cancellationToken);
+                await ProcessLinkAsync(client, message, ct);
                 break;
             }
             case ChatType.Private:
-                await ProcessLinkAsync(botClient, message, cancellationToken);
+                await ProcessLinkAsync(client, message, ct);
                 break;
             default:
                 return;
         }
+    }
+
+    private async Task ProcessLinkAsync(ITelegramBotClient client, ParsedMessage message, CancellationToken ct)
+    {
+        await client.SetMessageReaction(message.ChatId, message.Id, ["\ud83d\udc40"],
+            cancellationToken: ct);
+
+        var videoStream = await scraperService.GetVideoStreamAsync(message.VideoLink!);
+
+        await client.SendVideo(
+            chatId: message.ChatId,
+            video: videoStream,
+            disableNotification: message.Settings.Notification,
+            cancellationToken: ct);
+
+        await client.SetMessageReaction(message.ChatId, message.Id, ["\ud83d\udcaf"],
+            cancellationToken: ct);
+        
+        if (message.Settings.DeleteOriginMessage)
+            await client.DeleteMessage(message.ChatId, message.Id, ct);
     }
 }
