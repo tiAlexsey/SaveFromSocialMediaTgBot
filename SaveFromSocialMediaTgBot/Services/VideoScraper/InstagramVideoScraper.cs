@@ -6,7 +6,10 @@ using SaveFromSocialMediaTgBot.Interfaces;
 
 namespace SaveFromSocialMediaTgBot.Services.VideoScraper;
 
-public class InstagramVideoScraper(IConfiguration configuration, HttpClient client) : IVideoScraper
+public class InstagramVideoScraper(
+    ILogger<InstagramVideoScraper> logger,
+    IConfiguration configuration,
+    HttpClient client) : IVideoScraper
 {
     private readonly Random random = new();
     private readonly Regex pattern = new(PatternConstants.INSTAGRAM, RegexOptions.Compiled);
@@ -49,7 +52,11 @@ public class InstagramVideoScraper(IConfiguration configuration, HttpClient clie
 
 
                 if (match.Success)
-                    return match.Value.Trim('"').Replace("\\", "");
+                {
+                    var findUrl = match.Groups[0].Value.Replace("&amp;", "&");
+                    logger.LogInformation("Found video url: {findUrl}", findUrl);
+                    return findUrl;
+                }
 
                 if (i == 0)
                     // Повторная авторизация на случай, если текущие куки устарели
