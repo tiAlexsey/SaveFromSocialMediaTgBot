@@ -1,5 +1,6 @@
 using SaveFromSocialMediaTgBot.Exceptions;
 using SaveFromSocialMediaTgBot.Interfaces;
+using SaveFromSocialMediaTgBot.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -25,17 +26,25 @@ public class TelegramBotWorker(
     private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update,
         CancellationToken cancellationToken)
     {
+        using var _ = RequestContext.Push(update);
+        logger.LogInformation("Handling update of type {UpdateType}", update.Type);
+
         try
         {
             switch (update)
             {
                 case { Type: UpdateType.CallbackQuery }:
+                    logger.LogInformation("Processing callback query from chat {ChatId}", update.CallbackQuery!.Message!.Chat.Id);
                     await telegramBotService.CallbackWorkflowAsync(botClient, update, cancellationToken);
                     return;
+
                 case { Type: UpdateType.Message, Message.Type: MessageType.Text }:
+                    logger.LogInformation("Processing text message from chat {ChatId}", update.Message!.Chat.Id);
                     await telegramBotService.UpdateWorkflowAsync(botClient, update, cancellationToken);
                     return;
+
                 default:
+                    logger.LogWarning("Received unsupported update type: {UpdateType}", update.Type);
                     return;
             }
         }

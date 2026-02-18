@@ -2,8 +2,10 @@ using System.Net;
 using PuppeteerSharp;
 using SaveFromSocialMediaTgBot.Data.Constants;
 using SaveFromSocialMediaTgBot.Interfaces;
+using SaveFromSocialMediaTgBot.Logging;
 using SaveFromSocialMediaTgBot.Services;
 using SaveFromSocialMediaTgBot.Services.VideoScraper;
+using Serilog;
 using Telegram.Bot;
 
 namespace SaveFromSocialMediaTgBot.Extensions;
@@ -14,6 +16,8 @@ public static class AppBuilderExtension
     {
         var services = builder.Services;
         var configuration = builder.Configuration;
+
+        services.ConfigureLogging(configuration);
 
         services.AddSingleton<ITelegramBotClient, TelegramBotClient>(_ =>
         {
@@ -59,5 +63,16 @@ public static class AppBuilderExtension
             });
 
         services.AddSingleton<ScraperService>();
+    }
+
+    private static void ConfigureLogging(this IServiceCollection services, IConfiguration configuration)
+    {
+        Log.Logger = new LoggerConfiguration()
+            .ReadFrom.Configuration(configuration)
+            .Enrich.FromLogContext()
+            .Enrich.With<RequestContextEnricher>()
+            .CreateLogger();
+
+        services.AddSerilog();
     }
 }
