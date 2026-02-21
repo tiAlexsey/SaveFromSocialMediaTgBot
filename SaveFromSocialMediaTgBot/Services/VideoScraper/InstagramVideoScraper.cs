@@ -39,39 +39,58 @@ public class InstagramVideoScraper(
 
     private async Task<string?> TryGetVideoUrlAsync(string pageUrl)
     {
+        logger.LogInformation("Start getting video url from {PageUrl}", pageUrl);
+
         await using var browser = await Puppeteer.LaunchAsync(launchOptions);
         await using var page = await browser.NewPageAsync();
+
         try
         {
+            logger.LogDebug("Setting cookies");
             await SetCookiesAsync(page);
+
             for (var i = 0; i < 2; i++)
             {
+                logger.LogInformation("Attempt {Attempt} to load page", i + 1);
+
                 await page.GoToAsync(pageUrl, navigationOptions);
 
                 var content = await page.GetContentAsync();
-                logger.LogInformation("Upload content: {content}", content);
+
+                logger.LogDebug("Page loaded. Content length: {Length}", content.Length);
+
                 var match = pattern.Match(content);
 
                 if (match.Success)
                 {
                     var findUrl = match.Groups[0].Value.Replace("&amp;", "&");
-                    logger.LogInformation("Found video url: {findUrl}", findUrl);
+
+                    logger.LogInformation("Video url found: {VideoUrl}", findUrl);
+
                     return findUrl;
                 }
 
+                logger.LogWarning("Video url not found on attempt {Attempt}", i + 1);
+
                 if (i == 0)
-                    // Повторная авторизация на случай, если текущие куки устарели
+                {
+                    logger.LogInformation("Trying to re-authorize (cookies may be expired)");
                     await page.SetCookieAsync(await AuthorizationAsync(page));
+                }
             }
         }
         catch (Exception ex)
         {
-            var fileName = $"Screenshot-{Regex.Match(pageUrl, "igsh=[^&]+")}.png";
-            logger.LogError(ex, "Error while trying to get video url, {screenshot}", fileName);
+            var fileName = $"Screenshot-{Regex.Match(pageUrl, "igsh=[^&]+")}.Value.png";
+
+            logger.LogError(ex, "Error while trying to get video url from {PageUrl}. Screenshot: {Screenshot}",
+                pageUrl, fileName);
+
             await page.ScreenshotAsync(fileName);
             throw;
         }
 
+        logger.LogWarning("Video url not found after all attempts for {PageUrl}", pageUrl);
         return null;
     }
 
@@ -79,6 +98,8 @@ public class InstagramVideoScraper(
     {
         if (!string.IsNullOrWhiteSpace(sessionId))
         {
+            logger.LogInformation("Applying session cookie");
+
             Cookies =
             [
                 new CookieParam
@@ -88,29 +109,43 @@ public class InstagramVideoScraper(
                     Domain = ".instagram.com"
                 }
             ];
+
             sessionId = string.Empty;
         }
+
+        logger.LogDebug("Setting {CookieCount} cookies", Cookies?.Length ?? 0);
 
         await page.SetCookieAsync(Cookies);
     }
 
     private async Task<CookieParam[]> AuthorizationAsync(IPage page)
     {
+        logger.LogInformation("Starting authorization process");
+
         await page.GoToAsync("https://www.instagram.com/accounts/login/");
 
         await page.WaitForSelectorAsync("input[name='username']");
         await page.WaitForSelectorAsync("input[name='password']");
+
+        logger.LogDebug("Login page loaded");
+
         await Task.Delay(random.Next(800, 1000));
 
         await page.TypeAsync("input[name='username']", login, typeOptions);
         await Task.Delay(random.Next(500, 1000));
+
         await page.TypeAsync("input[name='password']", password, typeOptions);
         await Task.Delay(random.Next(500, 1000));
+
+        logger.LogInformation("Submitting login form");
 
         await page.ClickAsync("button[type='submit']");
         await page.WaitForNavigationAsync(navigationOptions);
 
         Cookies = await page.GetCookiesAsync();
+
+        logger.LogInformation("Authorization successful. Received {CookieCount} cookies", Cookies.Length);
+
         return Cookies;
     }
 }
