@@ -1,5 +1,5 @@
-using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Web;
 using PuppeteerSharp;
 using PuppeteerSharp.Input;
 using SaveFromSocialMediaTgBot.Data.Constants;
@@ -56,34 +56,19 @@ public class InstagramVideoScraper(
                 await page.GoToAsync(pageUrl, navigationOptions);
 
                 var content = await page.GetContentAsync();
+                content = HttpUtility.HtmlDecode(content);
+
+                Console.WriteLine("Start load content c=3");
+                Console.WriteLine(content);
+                Console.WriteLine("End load content c=3");
 
                 logger.LogDebug("Page loaded. Content length: {Length}", content.Length);
 
                 var match = pattern.Match(content);
 
-                // test
-                var matches = pattern.Matches(content);
-
-                if (matches.Count == 0)
-                {
-                    logger.LogWarning("No regex matches found");
-                }
-                else
-                {
-                    foreach (Match m in matches)
-                    {
-                        logger.LogInformation("Match found: {Match}", m.Value);
-                        for (int g = 1; g < m.Groups.Count; g++)
-                        {
-                            logger.LogInformation("Group {GroupNumber}: {GroupValue}", g, m.Groups[g].Value);
-                        }
-                    }
-                }
-                // test 
-
                 if (match.Success)
                 {
-                    var findUrl = match.Value.Replace("&amp;", "&");
+                    var findUrl = match.Value;
 
                     logger.LogInformation("Video url found: {VideoUrl}", findUrl);
 
