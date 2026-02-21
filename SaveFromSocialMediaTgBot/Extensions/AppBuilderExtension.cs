@@ -49,6 +49,20 @@ public static class AppBuilderExtension
         Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(configuration)
             .Enrich.FromLogContext()
+            .Filter.ByIncludingOnly(evt =>
+            {
+                if (evt.Properties.TryGetValue("SourceContext", out var ctx))
+                {
+                    var source = ctx.ToString().Trim('"');
+                    if (source.StartsWith("System.Net.Http.HttpClient.IVideoScraper.LogicalHandler") ||
+                        source.StartsWith("System.Net.Http.HttpClient.IVideoScraper.ClientHandler"))
+                    {
+                        return evt.Level >= Serilog.Events.LogEventLevel.Warning;
+                    }
+                }
+
+                return true;
+            })
             .Enrich.With<RequestContextEnricher>()
             .CreateLogger();
 
