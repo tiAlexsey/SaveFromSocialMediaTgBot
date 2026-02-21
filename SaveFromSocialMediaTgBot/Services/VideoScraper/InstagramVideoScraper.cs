@@ -43,17 +43,14 @@ public class InstagramVideoScraper(
         await using var page = await browser.NewPageAsync();
         try
         {
-            logger.LogInformation(JsonSerializer.Serialize(Cookies));
             await SetCookiesAsync(page);
             for (var i = 0; i < 2; i++)
             {
                 await page.GoToAsync(pageUrl, navigationOptions);
 
                 var content = await page.GetContentAsync();
-                logger.LogInformation("Upload content: {content}", JsonSerializer.Serialize(content));
+                logger.LogInformation("Upload content: {content}", content);
                 var match = pattern.Match(content);
-
-                logger.LogInformation("Match is {match}",JsonSerializer.Serialize(match));
 
                 if (match.Success)
                 {
@@ -67,10 +64,10 @@ public class InstagramVideoScraper(
                     await page.SetCookieAsync(await AuthorizationAsync(page));
             }
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
             var fileName = $"Screenshot-{Regex.Match(pageUrl, "igsh=[^&]+")}.png";
-            Console.WriteLine(fileName);
+            logger.LogError(ex, "Error while trying to get video url, {screenshot}", fileName);
             await page.ScreenshotAsync(fileName);
             throw;
         }

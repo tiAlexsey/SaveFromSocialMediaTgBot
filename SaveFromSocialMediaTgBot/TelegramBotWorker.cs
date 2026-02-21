@@ -56,7 +56,7 @@ public class TelegramBotWorker(
         catch (Exception ex)
         {
             var logMessage = $"я обкакался, вот ошибка: {ex.Message}";
-            logger.LogError(logMessage + "\n" + ex.Message + ex);
+            logger.LogError(ex, logMessage);
             await botClient.SetMessageReaction(update.Message!.Chat.Id, update.Message.Id, ["\ud83d\udca9"],
                 cancellationToken: cancellationToken);
         }
