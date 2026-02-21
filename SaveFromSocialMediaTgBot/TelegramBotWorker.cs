@@ -36,7 +36,6 @@ public class TelegramBotWorker(
                     return;
 
                 case { Type: UpdateType.Message, Message.Type: MessageType.Text }:
-                    logger.LogInformation("Processing text message");
                     await telegramBotService.UpdateWorkflowAsync(botClient, update, ct);
                     return;
 
