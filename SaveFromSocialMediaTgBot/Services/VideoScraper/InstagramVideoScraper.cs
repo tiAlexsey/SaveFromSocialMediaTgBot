@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
 using PuppeteerSharp;
@@ -14,7 +13,7 @@ public class InstagramVideoScraper(
     HttpClient client) : IVideoScraper
 {
     private readonly Random random = new();
-    private readonly Regex pattern = new(PatternConstants.INSTAGRAM, RegexOptions.Compiled);
+    private readonly Regex pattern = new(PatternConstants.INSTAGRAM, RegexOptions.IgnoreCase | RegexOptions.Singleline);
     private readonly string login = configuration[EnvironmentConstants.INST_LOGIN] ?? "";
     private readonly string password = configuration[EnvironmentConstants.INST_PASSWORD] ?? "";
     private string sessionId = configuration[EnvironmentConstants.INST_COOKIE_SESSION_ID] ?? "";
@@ -51,16 +50,14 @@ public class InstagramVideoScraper(
 
             for (var i = 0; i < 2; i++)
             {
-                logger.LogInformation("Attempt {Attempt} to load page", i + 1);
                 await page.GoToAsync(pageUrl, navigationOptions);
                 var content = await page.GetContentAsync();
-                logger.LogInformation("Page loaded. Content length: {Length}", content.Length);
                 content = DecodeContent(content);
 
                 var match = pattern.Match(content);
                 if (match.Success)
                 {
-                    var findUrl = match.Value;
+                    var findUrl = match.Groups[1].Value;
                     logger.LogInformation("Video url found: {VideoUrl}", findUrl);
                     return findUrl;
                 }
@@ -116,23 +113,15 @@ public class InstagramVideoScraper(
         logger.LogInformation("Starting authorization process");
 
         await page.GoToAsync("https://www.instagram.com/accounts/login/");
-
         await page.WaitForSelectorAsync("input[name='username']");
         await page.WaitForSelectorAsync("input[name='password']");
-
         await Task.Delay(random.Next(800, 1000));
-
         await page.TypeAsync("input[name='username']", login, typeOptions);
         await Task.Delay(random.Next(500, 1000));
-
         await page.TypeAsync("input[name='password']", password, typeOptions);
         await Task.Delay(random.Next(500, 1000));
-
-        logger.LogInformation("Submitting login form");
-
         await page.ClickAsync("button[type='submit']");
         await page.WaitForNavigationAsync(navigationOptions);
-
         Cookies = await page.GetCookiesAsync();
 
         logger.LogInformation("Authorization successful. Received {CookieCount} cookies", Cookies.Length);
@@ -140,14 +129,12 @@ public class InstagramVideoScraper(
         return Cookies;
     }
 
-    private static string DecodeContent(string rawContent)
+    private string DecodeContent(string rawContent)
     {
         var unescaped = Regex.Unescape(rawContent);
         var fullyDecoded = HttpUtility.HtmlDecode(unescaped);
         fullyDecoded = fullyDecoded.Replace("\\/", "/");
-        Console.WriteLine("Start load content c=3");
-        Console.WriteLine(fullyDecoded);
-        Console.WriteLine("End load content c=3");
+        logger.LogDebug(fullyDecoded);
         return fullyDecoded;
     }
 }
