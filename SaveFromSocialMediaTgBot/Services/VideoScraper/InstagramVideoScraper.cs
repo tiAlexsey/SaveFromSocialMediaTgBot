@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using PuppeteerSharp;
 using PuppeteerSharp.Input;
@@ -42,14 +43,17 @@ public class InstagramVideoScraper(
         await using var page = await browser.NewPageAsync();
         try
         {
+            logger.LogInformation(JsonSerializer.Serialize(Cookies));
             await SetCookiesAsync(page);
             for (var i = 0; i < 2; i++)
             {
                 await page.GoToAsync(pageUrl, navigationOptions);
 
                 var content = await page.GetContentAsync();
+                logger.LogInformation("Upload content: {content}", JsonSerializer.Serialize(content));
                 var match = pattern.Match(content);
 
+                logger.LogInformation("Match is {match}",JsonSerializer.Serialize(match));
 
                 if (match.Success)
                 {
