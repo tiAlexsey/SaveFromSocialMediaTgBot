@@ -163,8 +163,6 @@ public class TelegramBotService(
 
     private async Task LinkHandlerAsync(ITelegramBotClient client, ParsedMessage message, CancellationToken ct)
     {
-        logger.LogInformation($"Received message to bot. ChatId: {message.ChatId}. Message: {message.Text}");
-
         switch (message.ChatType)
         {
             case ChatType.Group:

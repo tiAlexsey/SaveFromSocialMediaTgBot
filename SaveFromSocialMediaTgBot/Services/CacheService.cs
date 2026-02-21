@@ -9,9 +9,9 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> fetchFunction, CancellationToken cancellationToken = default)
+    public async Task<T> GetOrCreateAsync<T>(string key, Func<Task<T>> fetchFunction, CancellationToken ct = default)
     {
-        var cached = await GetAsync<T>(key, cancellationToken);
+        var cached = await GetAsync<T>(key, ct);
         if (cached != null)
         {
             return cached;
@@ -28,12 +28,12 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
         return result;
     }
 
-    public async Task SetAsync<T>(string key, T value, CancellationToken cancellationToken = default)
+    public async Task SetAsync<T>(string key, T value, CancellationToken ct = default)
     {
         try
         {
             var serialized = JsonSerializer.Serialize(value, _jsonOptions);
-            await cache.SetStringAsync(key, serialized, new DistributedCacheEntryOptions(), token: cancellationToken);
+            await cache.SetStringAsync(key, serialized, new DistributedCacheEntryOptions(), token: ct);
         }
         catch (JsonException ex)
         {
@@ -42,11 +42,11 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
         }
     }
 
-    private async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
+    private async Task<T?> GetAsync<T>(string key, CancellationToken ct = default)
     {
         try
         {
-            var serialized = await cache.GetStringAsync(key, cancellationToken);
+            var serialized = await cache.GetStringAsync(key, ct);
             return string.IsNullOrWhiteSpace(serialized)
                 ? default
                 : JsonSerializer.Deserialize<T>(serialized, _jsonOptions);

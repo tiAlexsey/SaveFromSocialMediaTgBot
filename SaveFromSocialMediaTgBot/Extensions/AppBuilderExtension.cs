@@ -6,33 +6,12 @@ using SaveFromSocialMediaTgBot.Logging;
 using SaveFromSocialMediaTgBot.Services;
 using SaveFromSocialMediaTgBot.Services.VideoScraper;
 using Serilog;
-using Telegram.Bot;
 
 namespace SaveFromSocialMediaTgBot.Extensions;
 
 public static class AppBuilderExtension
 {
-    public static void AddDependencyInjections(this IHostApplicationBuilder builder)
-    {
-        var services = builder.Services;
-        var configuration = builder.Configuration;
-
-        services.ConfigureLogging(configuration);
-
-        services.AddSingleton<ITelegramBotClient, TelegramBotClient>(_ =>
-        {
-            var options = new TelegramBotClientOptions(configuration[EnvironmentConstants.BOT_TOKEN]!);
-            return new TelegramBotClient(options);
-        });
-
-        services.AddCache(configuration);
-        services.AddTransient<ITelegramBotService, TelegramBotService>();
-        services.AddVideoScrapers();
-
-        services.AddHostedService<TelegramBotWorker>();
-    }
-
-    private static void AddCache(this IServiceCollection services, IConfiguration configuration)
+    internal static void AddCache(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddStackExchangeRedisCache(options =>
         {
@@ -43,7 +22,7 @@ public static class AppBuilderExtension
         services.AddSingleton<ICacheService, CacheService>();
     }
 
-    private static void AddVideoScrapers(this IServiceCollection services)
+    internal static void AddVideoScrapers(this IServiceCollection services)
     {
         // Puppeteer client for instagram
         new BrowserFetcher().DownloadAsync();
@@ -65,7 +44,7 @@ public static class AppBuilderExtension
         services.AddSingleton<ScraperService>();
     }
 
-    private static void ConfigureLogging(this IServiceCollection services, IConfiguration configuration)
+    internal static void ConfigureLogging(this IServiceCollection services, IConfiguration configuration)
     {
         Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(configuration)

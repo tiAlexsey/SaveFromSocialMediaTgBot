@@ -23,24 +23,21 @@ public class TelegramBotWorker(
         );
     }
 
-    private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update,
-        CancellationToken cancellationToken)
+    private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
     {
         using var _ = RequestContext.Push(update);
-        logger.LogInformation("Handling update of type {UpdateType}", update.Type);
-
         try
         {
             switch (update)
             {
                 case { Type: UpdateType.CallbackQuery }:
-                    logger.LogInformation("Processing callback query from chat {ChatId}", update.CallbackQuery!.Message!.Chat.Id);
-                    await telegramBotService.CallbackWorkflowAsync(botClient, update, cancellationToken);
+                    logger.LogInformation("Processing callback query");
+                    await telegramBotService.CallbackWorkflowAsync(botClient, update, ct);
                     return;
 
                 case { Type: UpdateType.Message, Message.Type: MessageType.Text }:
-                    logger.LogInformation("Processing text message from chat {ChatId}", update.Message!.Chat.Id);
-                    await telegramBotService.UpdateWorkflowAsync(botClient, update, cancellationToken);
+                    logger.LogInformation("Processing text message");
+                    await telegramBotService.UpdateWorkflowAsync(botClient, update, ct);
                     return;
 
                 default:
@@ -50,20 +47,19 @@ public class TelegramBotWorker(
         }
         catch (InvalidUrlException ex)
         {
+            logger.LogError(ex, ex.Message);
             await botClient.SetMessageReaction(update.Message!.Chat.Id, update.Message.Id, [],
-                cancellationToken: cancellationToken);
+                cancellationToken: ct);
         }
         catch (Exception ex)
         {
-            var logMessage = $"я обкакался, вот ошибка: {ex.Message}";
-            logger.LogError(ex, logMessage);
+            logger.LogError(ex, ex.Message);
             await botClient.SetMessageReaction(update.Message!.Chat.Id, update.Message.Id, ["\ud83d\udca9"],
-                cancellationToken: cancellationToken);
+                cancellationToken: ct);
         }
     }
 
-    private Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception,
-        CancellationToken cancellationToken)
+    private Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken ct)
     {
         logger.LogError(exception, exception.Message);
         return Task.CompletedTask;

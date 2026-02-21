@@ -39,8 +39,6 @@ public class InstagramVideoScraper(
 
     private async Task<string?> TryGetVideoUrlAsync(string pageUrl)
     {
-        logger.LogInformation("Start getting video url from {PageUrl}", pageUrl);
-
         await using var browser = await Puppeteer.LaunchAsync(launchOptions);
         await using var page = await browser.NewPageAsync();
 
@@ -58,12 +56,8 @@ public class InstagramVideoScraper(
                 if (match.Success)
                 {
                     var findUrl = match.Groups[1].Value;
-                    logger.LogInformation("Video url found: {VideoUrl}", findUrl);
                     return findUrl;
                 }
-
-                logger.LogWarning("Video url not found on attempt {Attempt}", i + 1);
-
                 if (i == 0)
                 {
                     logger.LogInformation("Trying to re-authorize (cookies may be expired)");
@@ -82,7 +76,6 @@ public class InstagramVideoScraper(
             throw;
         }
 
-        logger.LogWarning("Video url not found after all attempts for {PageUrl}", pageUrl);
         return null;
     }
 
@@ -102,15 +95,12 @@ public class InstagramVideoScraper(
 
             sessionId = string.Empty;
         }
-
-        logger.LogInformation("Setting {CookieCount} cookies", Cookies?.Length ?? 0);
-
         await page.SetCookieAsync(Cookies);
     }
 
     private async Task<CookieParam[]> AuthorizationAsync(IPage page)
     {
-        logger.LogInformation("Starting authorization process");
+        logger.LogInformation("Starting instagram authorization process");
 
         await page.GoToAsync("https://www.instagram.com/accounts/login/");
         await page.WaitForSelectorAsync("input[name='username']");
@@ -124,7 +114,7 @@ public class InstagramVideoScraper(
         await page.WaitForNavigationAsync(navigationOptions);
         Cookies = await page.GetCookiesAsync();
 
-        logger.LogInformation("Authorization successful. Received {CookieCount} cookies", Cookies.Length);
+        logger.LogInformation("Instagram authorization successful. Received {CookieCount} cookies", Cookies.Length);
 
         return Cookies;
     }
