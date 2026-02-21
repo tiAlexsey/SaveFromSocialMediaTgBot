@@ -61,9 +61,29 @@ public class InstagramVideoScraper(
 
                 var match = pattern.Match(content);
 
+                // test
+                var matches = pattern.Matches(content);
+
+                if (matches.Count == 0)
+                {
+                    logger.LogWarning("No regex matches found");
+                }
+                else
+                {
+                    foreach (Match m in matches)
+                    {
+                        logger.LogInformation("Match found: {Match}", m.Value);
+                        for (int g = 1; g < m.Groups.Count; g++)
+                        {
+                            logger.LogInformation("Group {GroupNumber}: {GroupValue}", g, m.Groups[g].Value);
+                        }
+                    }
+                }
+                // test 
+
                 if (match.Success)
                 {
-                    var findUrl = match.Groups[0].Value.Replace("&amp;", "&");
+                    var findUrl = match.Value.Replace("&amp;", "&");
 
                     logger.LogInformation("Video url found: {VideoUrl}", findUrl);
 
