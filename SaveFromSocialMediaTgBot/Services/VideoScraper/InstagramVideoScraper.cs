@@ -124,7 +124,6 @@ public class InstagramVideoScraper(
         var unescaped = Regex.Unescape(rawContent);
         var fullyDecoded = HttpUtility.HtmlDecode(unescaped);
         fullyDecoded = fullyDecoded.Replace("\\/", "/");
-        logger.LogDebug(fullyDecoded);
         return fullyDecoded;
     }
 }
