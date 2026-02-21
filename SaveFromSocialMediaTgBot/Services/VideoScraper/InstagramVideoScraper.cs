@@ -142,8 +142,8 @@ public class InstagramVideoScraper(
 
     private static string DecodeContent(string rawContent)
     {
-        var unicodeDecoded = JsonSerializer.Deserialize<string>($"\"{rawContent}\"")!;
-        var fullyDecoded = HttpUtility.HtmlDecode(unicodeDecoded);
+        var unescaped = Regex.Unescape(rawContent);
+        var fullyDecoded = HttpUtility.HtmlDecode(unescaped);
         fullyDecoded = fullyDecoded.Replace("\\/", "/");
         Console.WriteLine("Start load content c=3");
         Console.WriteLine(fullyDecoded);
