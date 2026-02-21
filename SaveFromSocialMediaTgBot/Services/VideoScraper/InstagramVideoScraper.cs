@@ -33,8 +33,17 @@ public class InstagramVideoScraper(
 
     public async Task<Stream> GetVideoStreamAsync(string url)
     {
+        logger.LogInformation("Start processing {Url}", url);
+
         var videoUrl = await TryGetVideoUrlAsync(url) ?? throw new FormatException(MessageConstants.ERROR_EMPTY_URL);
-        return await client.GetStreamAsync(videoUrl);
+
+        logger.LogInformation("Video URL resolved for {Url}", url);
+
+        var stream = await client.GetStreamAsync(videoUrl);
+
+        logger.LogInformation("Stream opened successfully for {Url}", url);
+
+        return stream;
     }
 
     private async Task<string?> TryGetVideoUrlAsync(string pageUrl)
@@ -46,8 +55,10 @@ public class InstagramVideoScraper(
         {
             await SetCookiesAsync(page);
 
-            for (var i = 0; i < 2; i++)
+            for (var attempt = 1; attempt <= 2; attempt++)
             {
+                logger.LogDebug("Fetching page (attempt {Attempt}) for {Url}", attempt, pageUrl);
+
                 await page.GoToAsync(pageUrl, navigationOptions);
                 var content = await page.GetContentAsync();
                 content = DecodeContent(content);
@@ -55,28 +66,23 @@ public class InstagramVideoScraper(
                 var match = pattern.Match(content);
                 if (match.Success)
                 {
-                    var findUrl = match.Groups[1].Value;
-                    return findUrl;
+                    logger.LogInformation("Video extracted on attempt {Attempt} for {Url}", attempt, pageUrl);
+                    return match.Groups[1].Value;
                 }
-                if (i == 0)
+                if (attempt == 1)
                 {
-                    logger.LogInformation("Trying to re-authorize (cookies may be expired)");
+                    logger.LogDebug("Video not found, re-authorizing for {Url}", pageUrl);
                     await page.SetCookieAsync(await AuthorizationAsync(page));
                 }
             }
+
+            return null;
         }
         catch (Exception ex)
         {
-            var fileName = $"Screenshot-{Regex.Match(pageUrl, "igsh=[^&]+")}.Value.png";
-
-            logger.LogError(ex, "Error while trying to get video url from {PageUrl}. Screenshot: {Screenshot}",
-                pageUrl, fileName);
-
-            await page.ScreenshotAsync(fileName);
+            logger.LogError(ex, "Metadata fetch failed for {Url}", pageUrl);
             throw;
         }
-
-        return null;
     }
 
     private async Task SetCookiesAsync(IPage page)
@@ -100,7 +106,7 @@ public class InstagramVideoScraper(
 
     private async Task<CookieParam[]> AuthorizationAsync(IPage page)
     {
-        logger.LogInformation("Starting instagram authorization process");
+        logger.LogInformation("Re-authorizing Instagram session");
 
         await page.GoToAsync("https://www.instagram.com/accounts/login/");
         await page.WaitForSelectorAsync("input[name='username']");
@@ -114,7 +120,7 @@ public class InstagramVideoScraper(
         await page.WaitForNavigationAsync(navigationOptions);
         Cookies = await page.GetCookiesAsync();
 
-        logger.LogInformation("Instagram authorization successful. Received {CookieCount} cookies", Cookies.Length);
+        logger.LogInformation("Instagram re-authorization successful");
 
         return Cookies;
     }

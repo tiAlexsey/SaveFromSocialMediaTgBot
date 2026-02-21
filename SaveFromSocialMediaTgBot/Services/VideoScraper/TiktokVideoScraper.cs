@@ -4,7 +4,10 @@ using SaveFromSocialMediaTgBot.Interfaces;
 
 namespace SaveFromSocialMediaTgBot.Services.VideoScraper;
 
-public class TiktokVideoScraper(IConfiguration configuration, HttpClient client) : IVideoScraper
+public class TiktokVideoScraper(
+    ILogger<TiktokVideoScraper> logger,
+    IConfiguration configuration,
+    HttpClient client) : IVideoScraper
 {
     private readonly int retryCount =
         int.TryParse(configuration[EnvironmentConstants.RETRY_COUNT], out var count) ? count : 1;
@@ -13,44 +16,47 @@ public class TiktokVideoScraper(IConfiguration configuration, HttpClient client)
 
     public bool CanHandle(string url) => url.Contains("tiktok", StringComparison.OrdinalIgnoreCase);
 
-    public async Task<Stream> GetVideoStreamAsync(string pageUrl)
+    public async Task<Stream> GetVideoStreamAsync(string url)
     {
-        var linkVideo = await GetVideoLinkAsync(client, pageUrl) ??
-                        throw new FormatException(MessageConstants.ERROR_EMPTY_URL);
+        logger.LogInformation("Start processing {Url}", url);
 
-        var request = new HttpRequestMessage(HttpMethod.Get, linkVideo) { Headers = { Referrer = new Uri(pageUrl) } };
+        var videoUrl = await GetVideoLinkAsync(client, url) ??
+                       throw new FormatException(MessageConstants.ERROR_EMPTY_URL);
+        
+        logger.LogInformation("Video URL resolved for {Url}", url);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, videoUrl) { Headers = { Referrer = new Uri(url) } };
 
         var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
-        return await response.Content.ReadAsStreamAsync();
+        var stream = await response.Content.ReadAsStreamAsync();
+
+        logger.LogInformation("Stream opened successfully for {Url}", url);
+
+        return stream;
     }
 
-    private async Task<string?> GetVideoLinkAsync(HttpClient httpClient, string pageUrl)
+    private async Task<string?> GetVideoLinkAsync(HttpClient httpClient, string url)
     {
-        string? result = null;
-        var i = 0;
-        while (i < retryCount && result is null)
+        for (var attempt = 1; attempt <= retryCount; attempt++)
         {
-            var response = await httpClient.GetAsync(pageUrl);
+            logger.LogDebug("Fetching metadata (attempt {Attempt}) for {Url}", attempt, url);
+
+            var response = await httpClient.GetAsync(url);
             response.EnsureSuccessStatusCode();
 
-            var html = await response.Content.ReadAsStringAsync();
+            var content = await response.Content.ReadAsStringAsync();
 
-            var match = pattern.Match(html);
+            var match = pattern.Match(content);
             if (match.Success)
             {
-                result = match.Value.Replace("\\u002F", "/");
+                logger.LogInformation("Video extracted on attempt {Attempt} for {Url}", attempt, url);
+
+                return match.Value.Replace("\\u002F", "/");
             }
-
-            i++;
         }
 
-        if (result != null)
-        {
-            Console.WriteLine("got link in {0} attemps", i);
-        }
-
-        return result;
+        return null;
     }
 }

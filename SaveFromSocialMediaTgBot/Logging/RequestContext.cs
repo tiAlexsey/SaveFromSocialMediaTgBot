@@ -29,7 +29,6 @@ public static class RequestContext
         {
             TraceId = Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("n"),
             ChatId = msg?.Chat.Id,
-            MessageId = msg?.MessageId,
             UserName = from?.Username,
             UpdateType = update.Type.ToString()
         };
@@ -39,7 +38,6 @@ public static class RequestContext
     {
         public string? TraceId { get; init; }
         public long? ChatId { get; init; }
-        public int? MessageId { get; init; }
         public string? UserName { get; init; }
         public string? UpdateType { get; init; }
     }

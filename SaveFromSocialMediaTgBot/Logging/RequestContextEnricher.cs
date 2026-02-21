@@ -10,16 +10,16 @@ public sealed class RequestContextEnricher : ILogEventEnricher
         var s = RequestContext.Current;
         if (s is null) return;
 
+        Add("TraceId", s.TraceId);
+        Add("ChatId", s.ChatId);
+        Add("UserName", s.UserName);
+        Add("UpdateType", s.UpdateType);
+        return;
+
         void Add(string name, object? value)
         {
             if (value is null || logEvent.Properties.ContainsKey(name)) return;
             logEvent.AddPropertyIfAbsent(f.CreateProperty(name, value));
         }
-
-        Add("TraceId", s.TraceId);
-        Add("ChatId", s.ChatId);
-        Add("MessageId", s.MessageId);
-        Add("UserName", s.UserName);
-        Add("UpdateType", s.UpdateType);
     }
 }

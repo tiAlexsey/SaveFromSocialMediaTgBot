@@ -6,7 +6,10 @@ using SaveFromSocialMediaTgBot.Interfaces;
 
 namespace SaveFromSocialMediaTgBot.Services.VideoScraper;
 
-public class TwitterVideoScraper(IConfiguration configuration, HttpClient client) : IVideoScraper
+public class TwitterVideoScraper(
+    ILogger<TwitterVideoScraper> logger,
+    IConfiguration configuration,
+    HttpClient client) : IVideoScraper
 {
     private readonly string authorization = configuration[EnvironmentConstants.TWITTER_TOKEN] ?? throw new NullReferenceException();
     private readonly Regex pattern = new(PatternConstants.TWITTER, RegexOptions.Compiled);
@@ -58,13 +61,25 @@ public class TwitterVideoScraper(IConfiguration configuration, HttpClient client
 
     public async Task<Stream> GetVideoStreamAsync(string url)
     {
+        logger.LogInformation("Start processing {Url}", url);
+
         var postId = GetPostId(url);
-        var videoUrl = (await GetVideoUrlsAsync(postId)).FirstOrDefault();
-        return await client.GetStreamAsync(videoUrl);
+
+        var videoUrl = (await GetVideoUrlsAsync(postId)).FirstOrDefault() ?? throw new FormatException(MessageConstants.ERROR_EMPTY_URL);
+
+        logger.LogInformation("Video URL resolved for {Url}", url);
+
+        var stream = await client.GetStreamAsync(videoUrl);
+        
+        logger.LogInformation("Stream opened successfully for {Url}", url);
+
+        return stream;
     }
 
     private async Task<List<string>> GetVideoUrlsAsync(string postId)
     {
+        logger.LogInformation("Fetching video URLs via GraphQL for PostId {PostId}", postId);
+
         await SetCookiesAsync();
 
         variables["tweetId"] = postId;
@@ -72,8 +87,13 @@ public class TwitterVideoScraper(IConfiguration configuration, HttpClient client
         var feat = JsonSerializer.Serialize(features);
         var url =
             $"https://x.com/i/api/graphql/2ICDjqPd81tulZcYrtpTuQ/TweetResultByRestId?variables={Uri.EscapeDataString(query)}&features={Uri.EscapeDataString(feat)}";
+
+        logger.LogDebug("GraphQL request URL prepared for PostId {PostId}", postId);
+
         var response = await client.GetAsync(url);
         response.EnsureSuccessStatusCode();
+
+        logger.LogInformation("GraphQL response status: {StatusCode} for PostId {PostId}", (int)response.StatusCode, postId);
 
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var media = json.RootElement.GetProperty("data").GetProperty("tweetResult").GetProperty("result")
@@ -89,8 +109,14 @@ public class TwitterVideoScraper(IConfiguration configuration, HttpClient client
                     .OrderByDescending(v => v.GetProperty("bitrate").GetInt32())
                     .First();
                 videoUrls.Add(best.GetProperty("url").GetString()!);
+
+                logger.LogDebug("Selected variant URL: {VideoUrl} with bitrate {Bitrate}",
+                    best.GetProperty("url").GetString(),
+                    best.GetProperty("bitrate").GetInt32());
             }
         }
+
+        logger.LogInformation("Found {VideoCount} video URLs for PostId {PostId}", videoUrls.Count, postId);
 
         return videoUrls;
     }
@@ -98,9 +124,9 @@ public class TwitterVideoScraper(IConfiguration configuration, HttpClient client
     private string GetPostId(string url)
     {
         var match = pattern.Match(url);
-        if (!match.Success)
-            throw new FormatException(MessageConstants.ERROR_EMPTY_URL);
-        return match.Groups[1].Value;
+        return !match.Success
+            ? throw new FormatException(MessageConstants.ERROR_EMPTY_URL)
+            : match.Groups[1].Value;
     }
 
     private async Task SetCookiesAsync()
