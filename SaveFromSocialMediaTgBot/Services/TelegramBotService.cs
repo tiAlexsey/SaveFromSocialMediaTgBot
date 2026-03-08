@@ -190,6 +190,7 @@ public class TelegramBotService(
         await client.SendVideo(
             chatId: message.ChatId,
             video: videoStream,
+            messageThreadId: message.TreadId,
             disableNotification: message.Settings.Notification,
             cancellationToken: ct);
 

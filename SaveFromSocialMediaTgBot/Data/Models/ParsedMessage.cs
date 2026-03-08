@@ -7,6 +7,7 @@ public class ParsedMessage
 {
     public int Id { get; }
     public long ChatId { get; }
+    public int? TreadId { get; }
     public long UserId { get; }
     public string? Text { get; }
     public ChatType ChatType { get; }
@@ -25,6 +26,7 @@ public class ParsedMessage
     {
         Id = message.Id;
         ChatId = message.Chat.Id;
+        TreadId = message.MessageThreadId;
         UserId = message.From!.Id;
         Text = message.Text;
         ChatType = message.Chat.Type;
