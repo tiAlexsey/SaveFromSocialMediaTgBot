@@ -16,7 +16,7 @@ services.AddVideoScrapers();
 services.AddTransient<ITelegramBotService, TelegramBotService>();
 services.AddSingleton<ITelegramBotClient, TelegramBotClient>(_ =>
 {
-    var options = new TelegramBotClientOptions(configuration[EnvironmentConstants.BOT_TOKEN]!);
+    var options = new TelegramBotClientOptions(configuration[EnvironmentConstants.BotToken]!);
     return new TelegramBotClient(options);
 });
 

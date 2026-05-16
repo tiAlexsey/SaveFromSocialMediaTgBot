@@ -15,7 +15,7 @@ public static class AppBuilderExtension
     {
         services.AddStackExchangeRedisCache(options =>
         {
-            options.Configuration = configuration[EnvironmentConstants.REDIS_CONNECTION_STRING];
+            options.Configuration = configuration[EnvironmentConstants.RedisConnectionString];
             options.InstanceName = "Chat-settings:";
         });
 

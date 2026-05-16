@@ -10,43 +10,43 @@ public class TiktokVideoScraper(
     HttpClient client) : IVideoScraper
 {
     private readonly int retryCount =
-        int.TryParse(configuration[EnvironmentConstants.RETRY_COUNT], out var count) ? count : 1;
+        int.TryParse(configuration[EnvironmentConstants.RetryCount], out var count) ? count : 1;
 
-    private readonly Regex pattern = new(PatternConstants.TICKTOCK, RegexOptions.Compiled);
+    private readonly Regex pattern = new(PatternConstants.TickTock, RegexOptions.Compiled);
 
     public bool CanHandle(string url) => url.Contains("tiktok", StringComparison.OrdinalIgnoreCase);
 
-    public async Task<Stream> GetVideoStreamAsync(string url)
+    public async Task<Stream> GetVideoStreamAsync(string url, CancellationToken ct)
     {
         logger.LogInformation("Start processing {Url}", url);
 
-        var videoUrl = await GetVideoLinkAsync(client, url) ??
-                       throw new FormatException(MessageConstants.ERROR_EMPTY_URL);
+        var videoUrl = await GetVideoLinkAsync(client, url, ct) ??
+                       throw new FormatException(MessageConstants.ErrorEmptyUrl);
         
         logger.LogInformation("Video URL resolved for {Url}", url);
 
         var request = new HttpRequestMessage(HttpMethod.Get, videoUrl) { Headers = { Referrer = new Uri(url) } };
 
-        var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
         response.EnsureSuccessStatusCode();
 
-        var stream = await response.Content.ReadAsStreamAsync();
+        var stream = await response.Content.ReadAsStreamAsync(ct);
 
         logger.LogInformation("Stream opened successfully for {Url}", url);
 
         return stream;
     }
 
-    private async Task<string?> GetVideoLinkAsync(HttpClient httpClient, string url)
+    private async Task<string?> GetVideoLinkAsync(HttpClient httpClient, string url, CancellationToken ct)
     {
         for (var attempt = 1; attempt <= retryCount; attempt++)
         {
             logger.LogDebug("Fetching metadata (attempt {Attempt}) for {Url}", attempt, url);
 
-            var response = await httpClient.GetAsync(url);
+            var response = await httpClient.GetAsync(url, ct);
             response.EnsureSuccessStatusCode();
 
-            var content = await response.Content.ReadAsStringAsync();
+            var content = await response.Content.ReadAsStringAsync(ct);
 
             var match = pattern.Match(content);
             if (match.Success)

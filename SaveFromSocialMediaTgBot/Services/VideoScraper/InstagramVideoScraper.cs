@@ -13,10 +13,10 @@ public class InstagramVideoScraper(
     HttpClient client) : IVideoScraper
 {
     private readonly Random random = new();
-    private readonly Regex pattern = new(PatternConstants.INSTAGRAM, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-    private readonly string login = configuration[EnvironmentConstants.INST_LOGIN] ?? "";
-    private readonly string password = configuration[EnvironmentConstants.INST_PASSWORD] ?? "";
-    private string sessionId = configuration[EnvironmentConstants.INST_COOKIE_SESSION_ID] ?? "";
+    private readonly Regex pattern = new(PatternConstants.Instagram, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+    private readonly string login = configuration[EnvironmentConstants.InstLogin] ?? "";
+    private readonly string password = configuration[EnvironmentConstants.InstPassword] ?? "";
+    private string sessionId = configuration[EnvironmentConstants.InstCookieSessionId] ?? "";
     private readonly NavigationOptions navigationOptions = new() { WaitUntil = [WaitUntilNavigation.DOMContentLoaded] };
     private readonly TypeOptions typeOptions = new() { Delay = 150 };
 
@@ -31,15 +31,15 @@ public class InstagramVideoScraper(
 
     public bool CanHandle(string url) => url.Contains("instagram.com", StringComparison.OrdinalIgnoreCase);
 
-    public async Task<Stream> GetVideoStreamAsync(string url)
+    public async Task<Stream> GetVideoStreamAsync(string url, CancellationToken ct)
     {
         logger.LogInformation("Start processing {Url}", url);
 
-        var videoUrl = await TryGetVideoUrlAsync(url) ?? throw new FormatException(MessageConstants.ERROR_EMPTY_URL);
+        var videoUrl = await TryGetVideoUrlAsync(url) ?? throw new FormatException(MessageConstants.ErrorEmptyUrl);
 
         logger.LogInformation("Video URL resolved for {Url}", url);
 
-        var stream = await client.GetStreamAsync(videoUrl);
+        var stream = await client.GetStreamAsync(videoUrl, ct);
 
         logger.LogInformation("Stream opened successfully for {Url}", url);
 
@@ -69,6 +69,7 @@ public class InstagramVideoScraper(
                     logger.LogInformation("Video extracted on attempt {Attempt} for {Url}", attempt, pageUrl);
                     return match.Groups[1].Value;
                 }
+
                 if (attempt == 1)
                 {
                     logger.LogDebug("Video not found, re-authorizing for {Url}", pageUrl);
@@ -101,6 +102,7 @@ public class InstagramVideoScraper(
 
             sessionId = string.Empty;
         }
+
         await page.SetCookieAsync(Cookies);
     }
 
@@ -125,7 +127,7 @@ public class InstagramVideoScraper(
         return Cookies;
     }
 
-    private string DecodeContent(string rawContent)
+    private static string DecodeContent(string rawContent)
     {
         var unescaped = Regex.Unescape(rawContent);
         var fullyDecoded = HttpUtility.HtmlDecode(unescaped);

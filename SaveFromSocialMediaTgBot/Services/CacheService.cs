@@ -21,7 +21,7 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
 
         if (result is null)
         {
-            throw new NullReferenceException($"{MessageConstants.ERROR_EMPTY_FETCH_FUNC}: {fetchFunction.Method.Name}");
+            throw new NullReferenceException($"{MessageConstants.ErrorEmptyFetchFunc}: {fetchFunction.Method.Name}");
         }
 
         await SetAsync(key, result);
@@ -38,7 +38,7 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
         catch (JsonException ex)
         {
             logger.LogError(ex, ex.Message);
-            throw new InvalidOperationException($"{MessageConstants.ERROR_SERIALIZE_VALUE} '{key}'", ex);
+            throw new InvalidOperationException($"{MessageConstants.ErrorSerializeValue} '{key}'", ex);
         }
     }
 
@@ -54,7 +54,7 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
         catch (JsonException ex)
         {
             logger.LogError(ex, ex.Message);
-            throw new InvalidOperationException($"{MessageConstants.ERROR_DESERIALIZE_VALUE} '{key}'", ex);
+            throw new InvalidOperationException($"{MessageConstants.ErrorDeserializeValue} '{key}'", ex);
         }
     }
 

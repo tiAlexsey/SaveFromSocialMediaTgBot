@@ -7,22 +7,22 @@ namespace SaveFromSocialMediaTgBot.Services.VideoScraper;
 
 public class YoutubeVideoScraper(HttpClient client) : IVideoScraper
 {
-    private readonly Regex pattern = new(PatternConstants.YOUTUBE);
+    private readonly Regex pattern = new(PatternConstants.Youtube);
     private const string USER_AGENT = "User-Agent";
     private const string USER_AGENT_VALUE = "com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X; US)";
 
     public bool CanHandle(string url) => url.Contains("youtube.com/shorts", StringComparison.OrdinalIgnoreCase);
 
-    public async Task<Stream> GetVideoStreamAsync(string url)
+    public async Task<Stream> GetVideoStreamAsync(string url, CancellationToken ct)
     {
-        var videoUrl = await GetVideoUrlsAsync(url);
-        return await client.GetStreamAsync(videoUrl);
+        var videoUrl = await GetVideoUrlsAsync(url, ct);
+        return await client.GetStreamAsync(videoUrl, ct);
     }
 
-    private async Task<string> GetVideoUrlsAsync(string url)
+    private async Task<string> GetVideoUrlsAsync(string url, CancellationToken ct)
     {
         var videoId = GetVideoId(url);
-        var visitorData = await GetVisitorData();
+        var visitorData = await GetVisitorData(ct);
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://www.youtube.com/youtubei/v1/player");
 
@@ -58,12 +58,12 @@ public class YoutubeVideoScraper(HttpClient client) : IVideoScraper
               """
         );
 
-        await Task.Delay(new Random().Next(500, 1500));
+        await Task.Delay(new Random().Next(500, 1500), ct);
 
-        var response = await client.SendAsync(request);
+        var response = await client.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
 
-        var responseBody = await response.Content.ReadAsStringAsync();
+        var responseBody = await response.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(responseBody);
         var root = doc.RootElement;
 
@@ -76,7 +76,7 @@ public class YoutubeVideoScraper(HttpClient client) : IVideoScraper
                 .GetString()!;
         }
 
-        throw new Exception(MessageConstants.ERROR_EMPTY_URL);
+        throw new Exception(MessageConstants.ErrorEmptyUrl);
     }
 
     private string GetVideoId(string url)
@@ -88,15 +88,15 @@ public class YoutubeVideoScraper(HttpClient client) : IVideoScraper
             : result;
     }
 
-    private async Task<string> GetVisitorData()
+    private async Task<string> GetVisitorData(CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, "https://www.youtube.com/sw.js_data");
         request.Headers.Add(USER_AGENT, USER_AGENT_VALUE);
         request.Headers.Add("Accept", "application/json, text/plain, */*");
         request.Headers.Add("Accept-Language", "en-US,en;q=0.9");
 
-        var response = await client.SendAsync(request);
-        var responseBody = await response.Content.ReadAsStringAsync();
+        var response = await client.SendAsync(request, ct);
+        var responseBody = await response.Content.ReadAsStringAsync(ct);
 
         var match = pattern.Match(responseBody);
         if (match.Success)
@@ -104,6 +104,6 @@ public class YoutubeVideoScraper(HttpClient client) : IVideoScraper
             return match.Value.Split("\"")[2];
         }
 
-        throw new FormatException(MessageConstants.ERROR_EMPTY_VISITOR_DATA);
+        throw new FormatException(MessageConstants.ErrorEmptyVisitorData);
     }
 }

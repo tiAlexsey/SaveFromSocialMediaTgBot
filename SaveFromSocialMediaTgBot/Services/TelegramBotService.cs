@@ -51,7 +51,7 @@ public class TelegramBotService(
         if (!await IsAllowSettingsAsync(client, model.ChatId, model.UserId, model.ChatType, ct))
         {
             await client.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id,
-                text: MessageConstants.ACCESS_DENIED,
+                text: MessageConstants.AccessDenied,
                 cancellationToken: ct);
             return;
         }
@@ -63,14 +63,14 @@ public class TelegramBotService(
 
         switch (model.Command)
         {
-            case CommandConstants.CLOSE_SETTINGS:
+            case CommandConstants.CloseSettings:
             {
                 await client.DeleteMessage(chatId: model.ChatId, messageId: model.MessageId,
                     cancellationToken: ct);
                 break;
             }
 
-            case CommandConstants.NOTIFICATION_MODE:
+            case CommandConstants.NotificationMode:
             {
                 if (bool.TryParse(model.Value, out var result))
                 {
@@ -80,11 +80,11 @@ public class TelegramBotService(
 
                 await cacheService.SetAsync(model.ChatId.ToString(), chatSettings, ct);
                 await client.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id,
-                    text: MessageConstants.SUCCESS, cancellationToken: ct);
+                    text: MessageConstants.Success, cancellationToken: ct);
                 break;
             }
 
-            case CommandConstants.MENTION_MODE:
+            case CommandConstants.MentionMode:
             {
                 if (bool.TryParse(model.Value, out var result))
                 {
@@ -94,11 +94,11 @@ public class TelegramBotService(
 
                 await cacheService.SetAsync(model.ChatId.ToString(), chatSettings, ct);
                 await client.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id,
-                    text: MessageConstants.SUCCESS, cancellationToken: ct);
+                    text: MessageConstants.Success, cancellationToken: ct);
                 break;
             }
-            
-            case CommandConstants.DELETE_ORIGIN_MESSAGE:
+
+            case CommandConstants.DeleteOriginMessage:
             {
                 if (bool.TryParse(model.Value, out var result))
                 {
@@ -108,7 +108,7 @@ public class TelegramBotService(
 
                 await cacheService.SetAsync(model.ChatId.ToString(), chatSettings, ct);
                 await client.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id,
-                    text: MessageConstants.SUCCESS, cancellationToken: ct);
+                    text: MessageConstants.Success, cancellationToken: ct);
                 break;
             }
         }
@@ -136,8 +136,8 @@ public class TelegramBotService(
 
         switch (message.BotCommand)
         {
-            case var command when command == $"{CommandConstants.SETTINGS}@{botInfo.Username}" ||
-                                  command == $"{CommandConstants.SETTINGS}" & message.ChatType == ChatType.Private:
+            case var command when command == $"{CommandConstants.Settings}@{botInfo.Username}" ||
+                                  command == $"{CommandConstants.Settings}" & message.ChatType == ChatType.Private:
             {
                 await client.SendMessage(
                     chatId: message.ChatId,
@@ -157,7 +157,7 @@ public class TelegramBotService(
         ChatType chatType, CancellationToken ct)
     {
         var member = await client.GetChatMember(chatId, userId, ct);
-        return member.Status is ChatMemberStatus.Creator or ChatMemberStatus.Administrator 
+        return member.Status is ChatMemberStatus.Creator or ChatMemberStatus.Administrator
                || chatType == ChatType.Private;
     }
 
@@ -196,7 +196,7 @@ public class TelegramBotService(
 
         await client.SetMessageReaction(message.ChatId, message.Id, ["\ud83d\udcaf"],
             cancellationToken: ct);
-        
+
         if (message.Settings.DeleteOriginMessage)
             await client.DeleteMessage(message.ChatId, message.Id, ct);
     }

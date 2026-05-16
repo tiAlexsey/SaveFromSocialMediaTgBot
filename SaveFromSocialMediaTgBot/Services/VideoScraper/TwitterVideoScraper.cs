@@ -11,8 +11,8 @@ public class TwitterVideoScraper(
     IConfiguration configuration,
     HttpClient client) : IVideoScraper
 {
-    private readonly string authorization = configuration[EnvironmentConstants.TWITTER_TOKEN] ?? throw new NullReferenceException();
-    private readonly Regex pattern = new(PatternConstants.TWITTER, RegexOptions.Compiled);
+    private readonly string authorization = configuration[EnvironmentConstants.TwitterToken] ?? throw new NullReferenceException();
+    private readonly Regex pattern = new(PatternConstants.Twitter, RegexOptions.Compiled);
 
     private readonly Dictionary<string, object> variables = new()
     {
@@ -59,28 +59,28 @@ public class TwitterVideoScraper(
     public bool CanHandle(string url) => url.Contains("twitter", StringComparison.OrdinalIgnoreCase) ||
                                          url.Contains("x.com", StringComparison.OrdinalIgnoreCase);
 
-    public async Task<Stream> GetVideoStreamAsync(string url)
+    public async Task<Stream> GetVideoStreamAsync(string url,  CancellationToken ct)
     {
         logger.LogInformation("Start processing {Url}", url);
 
         var postId = GetPostId(url);
 
-        var videoUrl = (await GetVideoUrlsAsync(postId)).FirstOrDefault() ?? throw new FormatException(MessageConstants.ERROR_EMPTY_URL);
+        var videoUrl = (await GetVideoUrlsAsync(postId, ct)).FirstOrDefault() ?? throw new FormatException(MessageConstants.ErrorEmptyUrl);
 
         logger.LogInformation("Video URL resolved for {Url}", url);
 
-        var stream = await client.GetStreamAsync(videoUrl);
+        var stream = await client.GetStreamAsync(videoUrl, ct);
         
         logger.LogInformation("Stream opened successfully for {Url}", url);
 
         return stream;
     }
 
-    private async Task<List<string>> GetVideoUrlsAsync(string postId)
+    private async Task<List<string>> GetVideoUrlsAsync(string postId, CancellationToken ct)
     {
         logger.LogInformation("Fetching video URLs via GraphQL for PostId {PostId}", postId);
 
-        await SetCookiesAsync();
+        await SetCookiesAsync(ct);
 
         variables["tweetId"] = postId;
         var query = JsonSerializer.Serialize(variables);
@@ -90,12 +90,12 @@ public class TwitterVideoScraper(
 
         logger.LogDebug("GraphQL request URL prepared for PostId {PostId}", postId);
 
-        var response = await client.GetAsync(url);
+        var response = await client.GetAsync(url, ct);
         response.EnsureSuccessStatusCode();
 
         logger.LogInformation("GraphQL response status: {StatusCode} for PostId {PostId}", (int)response.StatusCode, postId);
 
-        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
         var media = json.RootElement.GetProperty("data").GetProperty("tweetResult").GetProperty("result")
             .GetProperty("legacy").GetProperty("entities").GetProperty("media");
 
@@ -125,17 +125,17 @@ public class TwitterVideoScraper(
     {
         var match = pattern.Match(url);
         return !match.Success
-            ? throw new FormatException(MessageConstants.ERROR_EMPTY_URL)
+            ? throw new FormatException(MessageConstants.ErrorEmptyUrl)
             : match.Groups[1].Value;
     }
 
-    private async Task SetCookiesAsync()
+    private async Task SetCookiesAsync(CancellationToken ct)
     {
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authorization);
         client.DefaultRequestHeaders.Remove("x-guest-token");
-        var response = await client.PostAsync("https://api.x.com/1.1/guest/activate.json", null);
+        var response = await client.PostAsync("https://api.x.com/1.1/guest/activate.json", null, ct);
         response.EnsureSuccessStatusCode();
-        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
         var token = json.RootElement.GetProperty("guest_token").GetString();
         client.DefaultRequestHeaders.Add("x-guest-token", token);
     }

@@ -2,9 +2,9 @@ namespace SaveFromSocialMediaTgBot.Data.Constants;
 
 public static class CommandConstants
 {
-    public const string SETTINGS = "/settings";
-    public const string CLOSE_SETTINGS = "/settings-close";
-    public const string MENTION_MODE = "/settings-mention";
-    public const string NOTIFICATION_MODE = "/settings-notification";
-    public const string DELETE_ORIGIN_MESSAGE = "/settings-origin-message";
+    public const string Settings = "/settings";
+    public const string CloseSettings = "/settings-close";
+    public const string MentionMode = "/settings-mention";
+    public const string NotificationMode = "/settings-notification";
+    public const string DeleteOriginMessage = "/settings-origin-message";
 }
