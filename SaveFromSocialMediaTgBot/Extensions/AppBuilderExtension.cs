@@ -29,7 +29,7 @@ public static class AppBuilderExtension
         // Puppeteer client for instagram
         new BrowserFetcher().DownloadAsync();
 
-        var launchOptions = new LaunchOptions()
+        var launchOptions = new LaunchOptions
         {
             Headless = true,
             ExecutablePath = "/usr/bin/chromium",
