@@ -1,13 +1,11 @@
 using System.Text.RegularExpressions;
 using SaveFromSocialMediaTgBot.Data.Constants;
+using SaveFromSocialMediaTgBot.Data.Models;
 using SaveFromSocialMediaTgBot.Interfaces;
 
-namespace SaveFromSocialMediaTgBot.Services.VideoScraper;
+namespace SaveFromSocialMediaTgBot.Services.Scraper;
 
-public class TiktokVideoScraper(
-    ILogger<TiktokVideoScraper> logger,
-    IConfiguration configuration,
-    HttpClient client) : IVideoScraper
+public class TiktokScraper(ILogger<TiktokScraper> logger, IConfiguration configuration, HttpClient client) : IScraper
 {
     private readonly int retryCount =
         int.TryParse(configuration[EnvironmentConstants.RetryCount], out var count) ? count : 1;
@@ -16,13 +14,13 @@ public class TiktokVideoScraper(
 
     public bool CanHandle(string url) => url.Contains("tiktok", StringComparison.OrdinalIgnoreCase);
 
-    public async Task<Stream> GetVideoStreamAsync(string url, CancellationToken ct)
+    public async Task<ScraperResponse> GetSourceStreamAsync(string url, CancellationToken ct)
     {
         logger.LogInformation("Start processing {Url}", url);
 
         var videoUrl = await GetVideoLinkAsync(client, url, ct) ??
                        throw new FormatException(MessageConstants.ErrorEmptyUrl);
-        
+
         logger.LogInformation("Video URL resolved for {Url}", url);
 
         var request = new HttpRequestMessage(HttpMethod.Get, videoUrl) { Headers = { Referrer = new Uri(url) } };
@@ -34,7 +32,7 @@ public class TiktokVideoScraper(
 
         logger.LogInformation("Stream opened successfully for {Url}", url);
 
-        return stream;
+        return new ScraperResponse([new ScraperResult(stream, MediaType.Video)]);
     }
 
     private async Task<string?> GetVideoLinkAsync(HttpClient httpClient, string url, CancellationToken ct)

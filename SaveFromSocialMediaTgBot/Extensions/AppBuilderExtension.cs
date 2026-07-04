@@ -4,14 +4,14 @@ using SaveFromSocialMediaTgBot.Data.Constants;
 using SaveFromSocialMediaTgBot.Interfaces;
 using SaveFromSocialMediaTgBot.Logging;
 using SaveFromSocialMediaTgBot.Services;
-using SaveFromSocialMediaTgBot.Services.VideoScraper;
+using SaveFromSocialMediaTgBot.Services.Scraper;
 using Serilog;
 
 namespace SaveFromSocialMediaTgBot.Extensions;
 
 public static class AppBuilderExtension
 {
-    internal static void AddCache(this IServiceCollection services, IConfiguration configuration)
+    internal static IServiceCollection AddCache(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddStackExchangeRedisCache(options =>
         {
@@ -20,17 +20,27 @@ public static class AppBuilderExtension
         });
 
         services.AddSingleton<ICacheService, CacheService>();
+
+        return services;
     }
 
-    internal static void AddVideoScrapers(this IServiceCollection services)
+    internal static IServiceCollection AddVideoScrapers(this IServiceCollection services)
     {
         // Puppeteer client for instagram
         new BrowserFetcher().DownloadAsync();
 
-        services.AddHttpClient<IVideoScraper, InstagramVideoScraper>();
-        services.AddHttpClient<IVideoScraper, TwitterVideoScraper>();
-        services.AddHttpClient<IVideoScraper, YoutubeVideoScraper>();
-        services.AddHttpClient<IVideoScraper, TiktokVideoScraper>(client =>
+        var launchOptions = new LaunchOptions()
+        {
+            Headless = true,
+            ExecutablePath = "/usr/bin/chromium",
+            Args = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+        };
+
+        services.AddSingleton<IBrowser>(sp => Puppeteer.LaunchAsync(launchOptions).GetAwaiter().GetResult());
+        services.AddHttpClient<IScraper, InstagramScraper>();
+        services.AddHttpClient<IScraper, TwitterScraper>();
+        services.AddHttpClient<IScraper, YoutubeScraper>();
+        services.AddHttpClient<IScraper, TiktokScraper>(client =>
             {
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
             })
@@ -42,9 +52,11 @@ public static class AppBuilderExtension
             });
 
         services.AddSingleton<ScraperService>();
+
+        return services;
     }
 
-    internal static void ConfigureLogging(this IServiceCollection services, IConfiguration configuration)
+    internal static IServiceCollection ConfigureLogging(this IServiceCollection services, IConfiguration configuration)
     {
         Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(configuration)
@@ -67,5 +79,7 @@ public static class AppBuilderExtension
             .CreateLogger();
 
         services.AddSerilog();
+
+        return services;
     }
 }

@@ -2,17 +2,15 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using SaveFromSocialMediaTgBot.Data.Constants;
+using SaveFromSocialMediaTgBot.Data.Models;
 using SaveFromSocialMediaTgBot.Interfaces;
 
-namespace SaveFromSocialMediaTgBot.Services.VideoScraper;
+namespace SaveFromSocialMediaTgBot.Services.Scraper;
 
-public class TwitterVideoScraper(
-    ILogger<TwitterVideoScraper> logger,
-    IConfiguration configuration,
-    HttpClient client) : IVideoScraper
+public class TwitterScraper(ILogger<TwitterScraper> logger, IConfiguration configuration, HttpClient client) : IScraper
 {
     private readonly string authorization = configuration[EnvironmentConstants.TwitterToken] ?? throw new NullReferenceException();
-    private readonly Regex pattern = new(PatternConstants.Twitter, RegexOptions.Compiled);
+    private readonly Regex pattern = new(PatternConstants.TwitterVideo, RegexOptions.Compiled);
 
     private readonly Dictionary<string, object> variables = new()
     {
@@ -59,7 +57,7 @@ public class TwitterVideoScraper(
     public bool CanHandle(string url) => url.Contains("twitter", StringComparison.OrdinalIgnoreCase) ||
                                          url.Contains("x.com", StringComparison.OrdinalIgnoreCase);
 
-    public async Task<Stream> GetVideoStreamAsync(string url,  CancellationToken ct)
+    public async Task<ScraperResponse> GetSourceStreamAsync(string url,  CancellationToken ct)
     {
         logger.LogInformation("Start processing {Url}", url);
 
@@ -73,7 +71,7 @@ public class TwitterVideoScraper(
         
         logger.LogInformation("Stream opened successfully for {Url}", url);
 
-        return stream;
+        return new ScraperResponse([new ScraperResult(stream, MediaType.Video)]);
     }
 
     private async Task<List<string>> GetVideoUrlsAsync(string postId, CancellationToken ct)

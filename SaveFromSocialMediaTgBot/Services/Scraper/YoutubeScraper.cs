@@ -1,11 +1,12 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using SaveFromSocialMediaTgBot.Data.Constants;
+using SaveFromSocialMediaTgBot.Data.Models;
 using SaveFromSocialMediaTgBot.Interfaces;
 
-namespace SaveFromSocialMediaTgBot.Services.VideoScraper;
+namespace SaveFromSocialMediaTgBot.Services.Scraper;
 
-public class YoutubeVideoScraper(HttpClient client) : IVideoScraper
+public class YoutubeScraper(HttpClient client) : IScraper
 {
     private readonly Regex pattern = new(PatternConstants.Youtube);
     private const string USER_AGENT = "User-Agent";
@@ -13,10 +14,12 @@ public class YoutubeVideoScraper(HttpClient client) : IVideoScraper
 
     public bool CanHandle(string url) => url.Contains("youtube.com/shorts", StringComparison.OrdinalIgnoreCase);
 
-    public async Task<Stream> GetVideoStreamAsync(string url, CancellationToken ct)
+    public async Task<ScraperResponse> GetSourceStreamAsync(string url, CancellationToken ct)
     {
         var videoUrl = await GetVideoUrlsAsync(url, ct);
-        return await client.GetStreamAsync(videoUrl, ct);
+        var stream = await client.GetStreamAsync(videoUrl, ct);
+        
+        return new ScraperResponse([new ScraperResult(stream, MediaType.Video)]);
     }
 
     private async Task<string> GetVideoUrlsAsync(string url, CancellationToken ct)

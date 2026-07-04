@@ -11,9 +11,9 @@ namespace SaveFromSocialMediaTgBot.Services;
 public class TelegramBotService(
     ScraperService scraperService,
     ICacheService cacheService,
-    ILogger<TelegramBotService> logger) : ITelegramBotService
+    ITelegramBotClient client) : ITelegramBotService
 {
-    public async Task UpdateWorkflowAsync(ITelegramBotClient client, Update update, CancellationToken ct)
+    public async Task UpdateWorkflowAsync(Update update, CancellationToken ct)
     {
         var chatSettings = await cacheService.GetOrCreateAsync(update.Message!.Chat.Id.ToString(),
             async () => new ChatSettings(), ct);
@@ -23,17 +23,17 @@ public class TelegramBotService(
         switch (message.Type)
         {
             case MessageEntityType.BotCommand:
-                await ProcessBotCommandAsync(client, message, ct);
+                await ProcessBotCommandAsync(message, ct);
                 return;
             case MessageEntityType.Url:
-                await LinkHandlerAsync(client, message, ct);
+                await LinkHandlerAsync(message, ct);
                 return;
             default:
                 return;
         }
     }
 
-    public async Task CallbackWorkflowAsync(ITelegramBotClient client, Update update, CancellationToken ct)
+    public async Task CallbackWorkflowAsync(Update update, CancellationToken ct)
     {
         var data = update.CallbackQuery!.Data ?? string.Empty;
         var parts = data.Split(':', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -48,7 +48,7 @@ public class TelegramBotService(
             MessageId = update.CallbackQuery.Message!.MessageId
         };
 
-        if (!await IsAllowSettingsAsync(client, model.ChatId, model.UserId, model.ChatType, ct))
+        if (!await IsAllowSettingsAsync(model.ChatId, model.UserId, model.ChatType, ct))
         {
             await client.AnswerCallbackQuery(callbackQueryId: update.CallbackQuery.Id,
                 text: MessageConstants.AccessDenied,
@@ -124,9 +124,9 @@ public class TelegramBotService(
         }
     }
 
-    private async Task ProcessBotCommandAsync(ITelegramBotClient client, ParsedMessage message, CancellationToken ct)
+    private async Task ProcessBotCommandAsync(ParsedMessage message, CancellationToken ct)
     {
-        if (!await IsAllowSettingsAsync(client, message.ChatId, message.UserId, message.ChatType, ct))
+        if (!await IsAllowSettingsAsync(message.ChatId, message.UserId, message.ChatType, ct))
         {
             await client.DeleteMessage(message.ChatId, message.Id, ct);
             return;
@@ -153,15 +153,14 @@ public class TelegramBotService(
         }
     }
 
-    private async Task<bool> IsAllowSettingsAsync(ITelegramBotClient client, long chatId, long userId,
-        ChatType chatType, CancellationToken ct)
+    private async Task<bool> IsAllowSettingsAsync(long chatId, long userId, ChatType chatType, CancellationToken ct)
     {
         var member = await client.GetChatMember(chatId, userId, ct);
         return member.Status is ChatMemberStatus.Creator or ChatMemberStatus.Administrator
                || chatType == ChatType.Private;
     }
 
-    private async Task LinkHandlerAsync(ITelegramBotClient client, ParsedMessage message, CancellationToken ct)
+    private async Task LinkHandlerAsync(ParsedMessage message, CancellationToken ct)
     {
         switch (message.ChatType)
         {
@@ -172,7 +171,7 @@ public class TelegramBotService(
                 if (message.Settings.Mention && !message.IsBotMention)
                     break;
 
-                await ProcessLinkAsync(client, message, ct);
+                await ProcessLinkAsync(message, ct);
                 break;
             }
             default:
@@ -180,19 +179,37 @@ public class TelegramBotService(
         }
     }
 
-    private async Task ProcessLinkAsync(ITelegramBotClient client, ParsedMessage message, CancellationToken ct)
+    private async Task ProcessLinkAsync(ParsedMessage message, CancellationToken ct)
     {
         await client.SetMessageReaction(message.ChatId, message.Id, ["\ud83d\udc40"],
             cancellationToken: ct);
 
-        var videoStream = await scraperService.GetVideoStreamAsync(message.VideoLink!);
+        var scraperResponse = await scraperService.GetSourceStreamAsync(message.VideoLink!, ct);
+        var media = scraperResponse.ToInputMedia();
 
-        await client.SendVideo(
-            chatId: message.ChatId,
-            video: videoStream,
-            messageThreadId: message.TreadId,
-            disableNotification: message.Settings.Notification,
-            cancellationToken: ct);
+        switch (media)
+        {
+            case { Count: > 10 }:
+                foreach (var mediaChunk in media.Chunk(10))
+                {
+                    await client.SendMediaGroup(
+                        chatId: message.ChatId,
+                        media: mediaChunk,
+                        messageThreadId: message.TreadId,
+                        disableNotification: message.Settings.Notification,
+                        cancellationToken: ct);
+                }
+
+                break;
+            case { Count: > 0 }:
+                await client.SendMediaGroup(
+                    chatId: message.ChatId,
+                    media: media,
+                    messageThreadId: message.TreadId,
+                    disableNotification: message.Settings.Notification,
+                    cancellationToken: ct);
+                break;
+        }
 
         await client.SetMessageReaction(message.ChatId, message.Id, ["\ud83d\udcaf"],
             cancellationToken: ct);

@@ -9,9 +9,9 @@ var builder = Host.CreateApplicationBuilder(args);
 var services = builder.Services;
 var configuration = builder.Configuration;
 
-services.ConfigureLogging(configuration);
-services.AddCache(configuration);
-services.AddVideoScrapers();
+services.ConfigureLogging(configuration)
+    .AddCache(configuration)
+    .AddVideoScrapers();
 
 services.AddTransient<ITelegramBotService, TelegramBotService>();
 services.AddSingleton<ITelegramBotClient, TelegramBotClient>(_ =>

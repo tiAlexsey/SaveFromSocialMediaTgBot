@@ -24,7 +24,7 @@ public class CacheService(IDistributedCache cache, ILogger<CacheService> logger)
             throw new NullReferenceException($"{MessageConstants.ErrorEmptyFetchFunc}: {fetchFunction.Method.Name}");
         }
 
-        await SetAsync(key, result);
+        await SetAsync(key, result, ct);
         return result;
     }
 

@@ -1,4 +1,3 @@
-
 namespace SaveFromSocialMediaTgBot.Interfaces;
 
 public interface ICacheService

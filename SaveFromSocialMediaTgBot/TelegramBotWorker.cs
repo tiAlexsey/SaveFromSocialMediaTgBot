@@ -32,11 +32,11 @@ public class TelegramBotWorker(
             {
                 case { Type: UpdateType.CallbackQuery }:
                     logger.LogInformation("Processing callback query");
-                    await telegramBotService.CallbackWorkflowAsync(botClient, update, ct);
+                    await telegramBotService.CallbackWorkflowAsync(update, ct);
                     return;
 
                 case { Type: UpdateType.Message, Message.Type: MessageType.Text }:
-                    await telegramBotService.UpdateWorkflowAsync(botClient, update, ct);
+                    await telegramBotService.UpdateWorkflowAsync(update, ct);
                     return;
 
                 default:
