@@ -59,7 +59,7 @@ public record Metadata(
 
 public record MusicInfo(
     [property: JsonPropertyName("music_asset_info")]
-    MusicAsset Asset
+    MusicAsset? Asset
 );
 
 public record MusicAsset(

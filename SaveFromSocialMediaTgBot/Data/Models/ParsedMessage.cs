@@ -88,7 +88,7 @@ public class ParsedMessage
     {
         if (string.IsNullOrWhiteSpace(text))
             return [];
-        var msg = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var msg = text.Replace("\n", " ").Replace("\r", " ").Split(' ', StringSplitOptions.RemoveEmptyEntries);
         return msg.Where(ValidCommands.Contains);
     }
 }

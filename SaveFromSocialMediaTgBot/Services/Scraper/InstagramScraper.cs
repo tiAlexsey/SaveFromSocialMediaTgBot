@@ -5,6 +5,7 @@ using SaveFromSocialMediaTgBot.Data.Models;
 using SaveFromSocialMediaTgBot.Data.Models.Instagram;
 using SaveFromSocialMediaTgBot.Interfaces;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Web;
 using PuppeteerSharp.Input;
@@ -22,14 +23,20 @@ public class InstagramScraper(
     private string sessionId = configuration[EnvironmentConstants.InstCookieSessionId] ?? "";
     private readonly NavigationOptions navigationOptions = new() { WaitUntil = [WaitUntilNavigation.DOMContentLoaded] };
     private readonly TypeOptions typeOptions = new() { Delay = 150 };
-    private readonly JsonSerializerOptions options = new() { PropertyNameCaseInsensitive = true };
+
+    private readonly JsonSerializerOptions options = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip
+    };
+
     private readonly Random random = new();
 
-    private readonly Regex videoPattern =
-        new(PatternConstants.InstagramVideo, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+    private readonly Regex reelPattern =
+        new(PatternConstants.InstagramReel, RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
-    private readonly Regex carouselPattern =
-        new(PatternConstants.InstagramCarousel, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+    private readonly Regex postPattern =
+        new(PatternConstants.InstagramPost, RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
     private static CookieParam[]? Cookies { get; set; }
 
@@ -38,12 +45,16 @@ public class InstagramScraper(
     public async Task<ScraperResponse> GetSourceStreamAsync(ScrapedRequest request, CancellationToken ct)
     {
         logger.LogInformation("Start processing {Url}", request.Link);
-        return GetFormatType(request.Link) switch
+
+        var format = GetFormatType(request.Link);
+        var results = format switch
         {
-            FormatType.Reel => new ScraperResponse(await TryGetReelAsync(request)),
-            FormatType.Post => new ScraperResponse(await TryGetPostAsync(request)),
+            FormatType.Reel => await ExtractDataAsync(request, TryParseReel),
+            FormatType.Post => await ExtractDataAsync(request, TryParsePost),
             _ => throw new FormatException(MessageConstants.ErrorEmptyUrl)
         };
+
+        return new ScraperResponse(results);
     }
 
     private static FormatType GetFormatType(string targetUrl) =>
@@ -51,8 +62,9 @@ public class InstagramScraper(
             ? FormatType.Reel
             : FormatType.Post;
 
-
-    private async Task<List<ScraperResult>?> TryGetReelAsync(ScrapedRequest request)
+    private async Task<List<ScraperResult>?> ExtractDataAsync(
+        ScrapedRequest request,
+        Func<string, ScrapedRequest, Task<List<ScraperResult>?>> parseFunc)
     {
         await using var page = await browser.NewPageAsync();
         var url = request.Link;
@@ -69,17 +81,13 @@ public class InstagramScraper(
                 var content = await page.GetContentAsync();
                 content = DecodeContent(content);
 
-                var match = videoPattern.Match(content);
-                if (match.Success)
-                {
-                    logger.LogInformation("Video extracted on attempt {Attempt} for {Url}", attempt, url);
-                    var videoUrl = match.Groups[1].Value;
-                    return [await DownloadMediaAsync(videoUrl, MediaType.Video)];
-                }
+                var result = await parseFunc(content, request);
+                if (result != null)
+                    return result;
 
                 if (attempt == 1)
                 {
-                    logger.LogDebug("Video not found, re-authorizing for {Url}", url);
+                    logger.LogDebug("Content not found, re-authorizing for {Url}", url);
                     await page.SetCookieAsync(await AuthorizationAsync(page));
                 }
             }
@@ -93,94 +101,80 @@ public class InstagramScraper(
         }
     }
 
-    private async Task<List<ScraperResult>?> TryGetPostAsync(ScrapedRequest request)
+    private async Task<List<ScraperResult>?> TryParseReel(string content, ScrapedRequest request)
     {
-        await using var page = await browser.NewPageAsync();
-        var pageUrl = request.Link;
+        var match = reelPattern.Match(content);
+        if (!match.Success)
+            return null;
 
-        try
+        var reelJson = FixInstagramJson(match.Value).Replace("\r", "\\r").Replace("\n", "\\n");
+        var reel = JsonSerializer.Deserialize<SearchResponse>(reelJson, options);
+
+        if (reel?.Video == null)
+            return null;
+
+        var result = await DownloadMediaAsync(reel.Video.FirstOrDefault()?.Url, MediaType.Video);
+        result.Text = MapParams(request, reel);
+        return [result];
+    }
+
+    private async Task<List<ScraperResult>?> TryParsePost(string content, ScrapedRequest request)
+    {
+        var match = postPattern.Matches(content)
+            .FirstOrDefault(x => x.Groups["json"].Value != "[]");
+
+        if (match is not { Success: true })
+            return null;
+
+        var postJson = match.Groups["json"].Value;
+        postJson = FixInstagramJson(postJson).Replace("\r", "\\r").Replace("\n", "\\n");
+
+        var searchResponse = JsonSerializer.Deserialize<List<SearchResponse>>(postJson, options)?
+            .FirstOrDefault();
+
+        if (searchResponse == null)
+            return null;
+
+        if (searchResponse.Carousel?.Count > 0)
         {
-            await SetCookiesAsync(page);
-
-            for (var attempt = 1; attempt <= 2; attempt++)
+            var collect = new Dictionary<string, ScraperResult>();
+            foreach (var search in searchResponse.Carousel)
             {
-                logger.LogDebug("Fetching page for {Url}", pageUrl);
+                var mediaType = search.Video != null ? MediaType.Video : MediaType.Photo;
+                var mediaUrl = search.Video != null
+                    ? search.Video.MaxBy(x => x.Height)?.Url
+                    : search.Photos?.Items?.MaxBy(x => x.Height)?.Url;
 
-                await page.GoToAsync(pageUrl, navigationOptions);
-                var content = await page.GetContentAsync();
-                content = DecodeContent(content);
+                if (mediaUrl == null) continue;
 
-                var match = carouselPattern.Matches(content)
-                    .FirstOrDefault(x => x.Groups["json"].Value != "[]");
-
-                if (match.Success)
-                {
-                    var carouselJson = match.Groups["json"].Value;
-                    carouselJson = FixInstagramJson(carouselJson).Replace("\r", "\\r").Replace("\n", "\\n");
-
-                    var searchResponse = JsonSerializer.Deserialize<List<SearchResponse>>(carouselJson, options)?
-                        .FirstOrDefault();
-
-                    if (searchResponse?.Carousel?.Count > 0)
-                    {
-                        var collect = new Dictionary<string, ScraperResult>();
-                        foreach (var search in searchResponse.Carousel)
-                        {
-                            var mediaType = search.Video != null ? MediaType.Video : MediaType.Photo;
-                            var url = search.Video != null
-                                ? search.Video.MaxBy(x => x.Height)?.Url
-                                : search.Photos.Items?.MaxBy(x => x.Height)?.Url;
-
-                            var result = await DownloadMediaAsync(url, mediaType);
-                            result.Text = MapParams(request, searchResponse);
-
-                            collect.TryAdd(search.Id, result);
-                        }
-
-                        return collect.Select(x => x.Value).ToList();
-                    }
-
-                    if (searchResponse?.Video?.Count > 0)
-                    {
-                        var url = searchResponse.Video.MaxBy(x => x.Height)?.Url;
-
-                        if (url == null)
-                            return null;
-
-                        var result = await DownloadMediaAsync(url, MediaType.Video);
-                        result.Text = MapParams(request, searchResponse);
-
-                        return [result];
-                    }
-
-                    if (searchResponse?.Image is not null)
-                    {
-                        var url = searchResponse.Image.Items?.MaxBy(x => x.Height)?.Url;
-
-                        if (url == null)
-                            return null;
-
-                        var result = await DownloadMediaAsync(url, MediaType.Photo);
-                        result.Text = MapParams(request, searchResponse);
-
-                        return [result];
-                    }
-                }
-
-                if (attempt == 1)
-                {
-                    logger.LogDebug("Content not found, re-authorizing for {Url}", pageUrl);
-                    await page.SetCookieAsync(await AuthorizationAsync(page));
-                }
+                var result = await DownloadMediaAsync(mediaUrl, mediaType);
+                result.Text = MapParams(request, searchResponse);
+                collect.TryAdd(search.Id, result);
             }
 
-            return null;
+            return collect.Values.ToList();
         }
-        catch (Exception ex)
+
+        string? url = null;
+        var type = MediaType.Photo;
+
+        if (searchResponse.Video?.Count > 0)
         {
-            logger.LogError(ex, "Metadata fetch failed for {Url}", pageUrl);
-            throw;
+            url = searchResponse.Video.MaxBy(x => x.Height)?.Url;
+            type = MediaType.Video;
         }
+        else if (searchResponse.Image?.Items != null)
+        {
+            url = searchResponse.Image.Items.MaxBy(x => x.Height)?.Url;
+            type = MediaType.Photo;
+        }
+
+        if (url == null)
+            return null;
+
+        var singleResult = await DownloadMediaAsync(url, type);
+        singleResult.Text = MapParams(request, searchResponse);
+        return [singleResult];
     }
 
     private async Task SetCookiesAsync(IPage page)
@@ -228,14 +222,12 @@ public class InstagramScraper(
     {
         var unescaped = Regex.Unescape(rawContent);
         var fullyDecoded = HttpUtility.HtmlDecode(unescaped);
-        fullyDecoded = fullyDecoded.Replace("\\/", "/");
-        return fullyDecoded;
+        return fullyDecoded.Replace("\\/", "/");
     }
 
     private static string FixInstagramJson(string rawJson)
     {
         var span = rawJson.AsSpan();
-
         var targetKey = "\"video_dash_manifest\"";
         var keyIndex = span.IndexOf(targetKey);
 
@@ -249,7 +241,6 @@ public class InstagramScraper(
             return rawJson;
 
         var absoluteEndTagIndex = keyIndex + endTagIndex + xmlEndTag.Length;
-
         var remainingSpan = span[absoluteEndTagIndex..];
 
         var closeQuoteIndex = remainingSpan.IndexOf('"');
@@ -266,13 +257,16 @@ public class InstagramScraper(
         return string.Concat(span[..keyIndex], span[propertyEndIndex..]);
     }
 
-    private async Task<ScraperResult> DownloadMediaAsync(string url, MediaType type)
+    private async Task<ScraperResult> DownloadMediaAsync(string? url, MediaType type)
     {
+        if (string.IsNullOrEmpty(url))
+            throw new ArgumentNullException(nameof(url));
+
         var stream = await client.GetStreamAsync(url);
         return new ScraperResult(stream, type);
     }
 
-    private string MapParams(ScrapedRequest request, SearchResponse searchResponse)
+    private static string MapParams(ScrapedRequest request, SearchResponse searchResponse)
     {
         var requested = request.Parameters;
         if (requested == Parameters.None)
@@ -289,7 +283,7 @@ public class InstagramScraper(
         if (requested.HasFlag(Parameters.Location) && searchResponse.Location?.Name != null)
             sb.AppendLine($"Location: {searchResponse.Location.Name}");
 
-        if (requested.HasFlag(Parameters.Music) && searchResponse.Metadata?.MusicInfo.Asset != null)
+        if (requested.HasFlag(Parameters.Music) && searchResponse.Metadata?.MusicInfo?.Asset != null)
         {
             var asset = searchResponse.Metadata.MusicInfo.Asset;
             sb.AppendLine($"Music: {asset.Artist} - {asset.Title}");
