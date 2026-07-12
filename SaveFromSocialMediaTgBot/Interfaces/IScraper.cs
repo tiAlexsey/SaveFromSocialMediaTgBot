@@ -5,5 +5,5 @@ namespace SaveFromSocialMediaTgBot.Interfaces;
 public interface IScraper
 {
     bool CanHandle(string url);
-    Task<ScraperResponse> GetSourceStreamAsync(string url, CancellationToken ct = default);
+    Task<ScraperResponse> GetSourceStreamAsync(ScrapedRequest request, CancellationToken ct = default);
 }

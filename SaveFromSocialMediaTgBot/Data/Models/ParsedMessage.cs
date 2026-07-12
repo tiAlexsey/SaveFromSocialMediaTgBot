@@ -5,20 +5,29 @@ namespace SaveFromSocialMediaTgBot.Data.Models;
 
 public class ParsedMessage
 {
+    private static readonly HashSet<string> ValidCommands =
+    [
+        "-d", "-description",
+        "-u", "-user",
+        "-l", "-location",
+        "-m", "-music"
+    ];
+
     public int Id { get; }
     public long ChatId { get; }
-    public int? TreadId { get; }
+    public int? ThreadId { get; }
     public long UserId { get; }
     public string? Text { get; }
     public ChatType ChatType { get; }
     public string? BotCommand { get; }
     public bool IsBotMention { get; }
     public ChatSettings Settings { get; }
-    public string? VideoLink { get; }
+    public string? Link { get; }
+    public Parameters Parameters { get; }
 
     public MessageEntityType? Type => BotCommand is not null
         ? MessageEntityType.BotCommand
-        : VideoLink is not null
+        : Link is not null
             ? MessageEntityType.Url
             : null;
 
@@ -26,7 +35,7 @@ public class ParsedMessage
     {
         Id = message.Id;
         ChatId = message.Chat.Id;
-        TreadId = message.MessageThreadId;
+        ThreadId = message.MessageThreadId;
         UserId = message.From!.Id;
         Text = message.Text;
         ChatType = message.Chat.Type;
@@ -34,8 +43,21 @@ public class ParsedMessage
 
         var messageEntities = GetMessageEntities(message);
         IsBotMention = CheckIsBotMention(messageEntities, $"@{botName}");
-        VideoLink = messageEntities.FirstOrDefault(x => x.Type == MessageEntityType.Url).Value;
+        Link = messageEntities.FirstOrDefault(x => x.Type == MessageEntityType.Url).Value;
         BotCommand = messageEntities.FirstOrDefault(x => x.Type == MessageEntityType.BotCommand).Value;
+
+        var main = SetParameters(message.Text ?? string.Empty);
+        var reply = SetParameters(message.ReplyToMessage?.Text ?? string.Empty);
+        Parameters = main.Concat(reply)
+            .Aggregate(Parameters.None, (current, param)
+                => current | param switch
+                {
+                    "-d" or "-description" => Parameters.Description,
+                    "-u" or "-user" => Parameters.User,
+                    "-l" or "-location" => Parameters.Location,
+                    "-m" or "-music" => Parameters.Music,
+                    _ => Parameters.None
+                });
     }
 
     private static List<(MessageEntityType Type, string Value)> GetMessageEntities(Message message)
@@ -61,4 +83,22 @@ public class ParsedMessage
     {
         return entities.FirstOrDefault(x => x.Type == MessageEntityType.Mention && x.Value == botName).Value != null;
     }
+
+    private static IEnumerable<string> SetParameters(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return [];
+        var msg = text.Replace("\n", " ").Replace("\r", " ").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return msg.Where(ValidCommands.Contains);
+    }
+}
+
+[Flags]
+public enum Parameters
+{
+    None = 0,
+    Description = 1 << 0,
+    User = 1 << 1,
+    Location = 1 << 2,
+    Music = 1 << 3
 }

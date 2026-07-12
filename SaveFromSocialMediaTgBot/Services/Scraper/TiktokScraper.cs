@@ -14,8 +14,9 @@ public class TiktokScraper(ILogger<TiktokScraper> logger, IConfiguration configu
 
     public bool CanHandle(string url) => url.Contains("tiktok", StringComparison.OrdinalIgnoreCase);
 
-    public async Task<ScraperResponse> GetSourceStreamAsync(string url, CancellationToken ct)
+    public async Task<ScraperResponse> GetSourceStreamAsync(ScrapedRequest request, CancellationToken ct)
     {
+        var url = request.Link;
         logger.LogInformation("Start processing {Url}", url);
 
         var videoUrl = await GetVideoLinkAsync(client, url, ct) ??
@@ -23,9 +24,9 @@ public class TiktokScraper(ILogger<TiktokScraper> logger, IConfiguration configu
 
         logger.LogInformation("Video URL resolved for {Url}", url);
 
-        var request = new HttpRequestMessage(HttpMethod.Get, videoUrl) { Headers = { Referrer = new Uri(url) } };
+        var httpRequest = new HttpRequestMessage(HttpMethod.Get, videoUrl) { Headers = { Referrer = new Uri(url) } };
 
-        var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+        var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct);
         response.EnsureSuccessStatusCode();
 
         var stream = await response.Content.ReadAsStreamAsync(ct);

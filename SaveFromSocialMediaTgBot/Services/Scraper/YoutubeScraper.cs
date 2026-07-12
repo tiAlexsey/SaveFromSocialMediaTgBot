@@ -14,8 +14,9 @@ public class YoutubeScraper(HttpClient client) : IScraper
 
     public bool CanHandle(string url) => url.Contains("youtube.com/shorts", StringComparison.OrdinalIgnoreCase);
 
-    public async Task<ScraperResponse> GetSourceStreamAsync(string url, CancellationToken ct)
+    public async Task<ScraperResponse> GetSourceStreamAsync(ScrapedRequest request, CancellationToken ct)
     {
+        var url = request.Link;
         var videoUrl = await GetVideoUrlsAsync(url, ct);
         var stream = await client.GetStreamAsync(videoUrl, ct);
         
