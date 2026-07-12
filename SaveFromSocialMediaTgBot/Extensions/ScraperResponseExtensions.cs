@@ -11,18 +11,23 @@ public static class ScraperResponseExtensions
             return [];
 
         var result = new List<IAlbumInputMedia>();
-        foreach (var scraperResult in streams.Results)
+        for (var i = 0; i < streams.Results.Count; i++)
         {
-            switch (scraperResult.MediaType)
+            var scraperResult = streams.Results[i];
+            switch (scraperResult)
             {
-                case MediaType.Video:
+                case { MediaType: MediaType.Video }:
                     var video = new InputMediaVideo(
                         InputFile.FromStream(scraperResult.Stream, $"file__{Guid.NewGuid():N}.mp4"));
+                    if (i == 0)
+                        video.Caption = scraperResult.Text;
                     result.Add(video);
                     break;
-                case MediaType.Photo:
+                case { MediaType: MediaType.Photo }:
                     var photo = new InputMediaPhoto(
                         InputFile.FromStream(scraperResult.Stream, $"file__{Guid.NewGuid():N}.png"));
+                    if (i == 0)
+                        photo.Caption = scraperResult.Text;
                     result.Add(photo);
                     break;
             }

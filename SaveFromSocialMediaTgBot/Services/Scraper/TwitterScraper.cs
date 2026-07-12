@@ -57,8 +57,9 @@ public class TwitterScraper(ILogger<TwitterScraper> logger, IConfiguration confi
     public bool CanHandle(string url) => url.Contains("twitter", StringComparison.OrdinalIgnoreCase) ||
                                          url.Contains("x.com", StringComparison.OrdinalIgnoreCase);
 
-    public async Task<ScraperResponse> GetSourceStreamAsync(string url,  CancellationToken ct)
+    public async Task<ScraperResponse> GetSourceStreamAsync(ScrapedRequest request,  CancellationToken ct)
     {
+        var url = request.Link;
         logger.LogInformation("Start processing {Url}", url);
 
         var postId = GetPostId(url);

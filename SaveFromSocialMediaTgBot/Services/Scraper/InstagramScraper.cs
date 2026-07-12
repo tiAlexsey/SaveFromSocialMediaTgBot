@@ -1,3 +1,4 @@
+using System.Text;
 using PuppeteerSharp;
 using SaveFromSocialMediaTgBot.Data.Constants;
 using SaveFromSocialMediaTgBot.Data.Models;
@@ -34,13 +35,16 @@ public class InstagramScraper(
 
     public bool CanHandle(string url) => url.Contains("instagram.com", StringComparison.OrdinalIgnoreCase);
 
-    public async Task<ScraperResponse> GetSourceStreamAsync(string url, CancellationToken ct) =>
-        GetFormatType(url) switch
+    public async Task<ScraperResponse> GetSourceStreamAsync(ScrapedRequest request, CancellationToken ct)
+    {
+        logger.LogInformation("Start processing {Url}", request.Link);
+        return GetFormatType(request.Link) switch
         {
-            FormatType.Reel => new ScraperResponse(await TryGetReelAsync(url)),
-            FormatType.Post => new ScraperResponse(await TryGetPostAsync(url)),
+            FormatType.Reel => new ScraperResponse(await TryGetReelAsync(request)),
+            FormatType.Post => new ScraperResponse(await TryGetPostAsync(request)),
             _ => throw new FormatException(MessageConstants.ErrorEmptyUrl)
         };
+    }
 
     private static FormatType GetFormatType(string targetUrl) =>
         targetUrl.Contains("reel", StringComparison.CurrentCultureIgnoreCase)
@@ -48,9 +52,10 @@ public class InstagramScraper(
             : FormatType.Post;
 
 
-    private async Task<List<ScraperResult>?> TryGetReelAsync(string pageUrl)
+    private async Task<List<ScraperResult>?> TryGetReelAsync(ScrapedRequest request)
     {
         await using var page = await browser.NewPageAsync();
+        var url = request.Link;
 
         try
         {
@@ -58,24 +63,23 @@ public class InstagramScraper(
 
             for (var attempt = 1; attempt <= 2; attempt++)
             {
-                logger.LogDebug("Fetching page (attempt {Attempt}) for {Url}", attempt, pageUrl);
+                logger.LogDebug("Fetching page (attempt {Attempt}) for {Url}", attempt, url);
 
-                await page.GoToAsync(pageUrl, navigationOptions);
+                await page.GoToAsync(url, navigationOptions);
                 var content = await page.GetContentAsync();
                 content = DecodeContent(content);
-                await page.CloseAsync();
 
                 var match = videoPattern.Match(content);
                 if (match.Success)
                 {
-                    logger.LogInformation("Video extracted on attempt {Attempt} for {Url}", attempt, pageUrl);
+                    logger.LogInformation("Video extracted on attempt {Attempt} for {Url}", attempt, url);
                     var videoUrl = match.Groups[1].Value;
                     return [await DownloadMediaAsync(videoUrl, MediaType.Video)];
                 }
 
                 if (attempt == 1)
                 {
-                    logger.LogDebug("Video not found, re-authorizing for {Url}", pageUrl);
+                    logger.LogDebug("Video not found, re-authorizing for {Url}", url);
                     await page.SetCookieAsync(await AuthorizationAsync(page));
                 }
             }
@@ -84,14 +88,15 @@ public class InstagramScraper(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Metadata fetch failed for {Url}", pageUrl);
+            logger.LogError(ex, "Metadata fetch failed for {Url}", url);
             throw;
         }
     }
 
-    private async Task<List<ScraperResult>?> TryGetPostAsync(string pageUrl)
+    private async Task<List<ScraperResult>?> TryGetPostAsync(ScrapedRequest request)
     {
         await using var page = await browser.NewPageAsync();
+        var pageUrl = request.Link;
 
         try
         {
@@ -103,9 +108,7 @@ public class InstagramScraper(
 
                 await page.GoToAsync(pageUrl, navigationOptions);
                 var content = await page.GetContentAsync();
-
                 content = DecodeContent(content);
-                await page.CloseAsync();
 
                 var match = carouselPattern.Matches(content)
                     .FirstOrDefault(x => x.Groups["json"].Value != "[]");
@@ -128,7 +131,10 @@ public class InstagramScraper(
                                 ? search.Video.MaxBy(x => x.Height)?.Url
                                 : search.Photos.Items?.MaxBy(x => x.Height)?.Url;
 
-                            collect.TryAdd(search.Id, await DownloadMediaAsync(url, mediaType));
+                            var result = await DownloadMediaAsync(url, mediaType);
+                            result.Text = MapParams(request, searchResponse);
+
+                            collect.TryAdd(search.Id, result);
                         }
 
                         return collect.Select(x => x.Value).ToList();
@@ -137,19 +143,33 @@ public class InstagramScraper(
                     if (searchResponse?.Video?.Count > 0)
                     {
                         var url = searchResponse.Video.MaxBy(x => x.Height)?.Url;
-                        return url != null ? [await DownloadMediaAsync(url, MediaType.Video)] : null;
+
+                        if (url == null)
+                            return null;
+
+                        var result = await DownloadMediaAsync(url, MediaType.Video);
+                        result.Text = MapParams(request, searchResponse);
+
+                        return [result];
                     }
 
                     if (searchResponse?.Image is not null)
                     {
                         var url = searchResponse.Image.Items?.MaxBy(x => x.Height)?.Url;
-                        return url != null ? [await DownloadMediaAsync(url, MediaType.Photo)] : null;
+
+                        if (url == null)
+                            return null;
+
+                        var result = await DownloadMediaAsync(url, MediaType.Photo);
+                        result.Text = MapParams(request, searchResponse);
+
+                        return [result];
                     }
                 }
 
                 if (attempt == 1)
                 {
-                    logger.LogDebug("Video not found, re-authorizing for {Url}", pageUrl);
+                    logger.LogDebug("Content not found, re-authorizing for {Url}", pageUrl);
                     await page.SetCookieAsync(await AuthorizationAsync(page));
                 }
             }
@@ -250,5 +270,31 @@ public class InstagramScraper(
     {
         var stream = await client.GetStreamAsync(url);
         return new ScraperResult(stream, type);
+    }
+
+    private string MapParams(ScrapedRequest request, SearchResponse searchResponse)
+    {
+        var requested = request.Parameters;
+        if (requested == Parameters.None)
+            return string.Empty;
+
+        var sb = new StringBuilder();
+
+        if (requested.HasFlag(Parameters.Description) && searchResponse.Caption?.Text != null)
+            sb.AppendLine(searchResponse.Caption.Text).AppendLine();
+
+        if (requested.HasFlag(Parameters.User) && searchResponse.User != null)
+            sb.AppendLine($"User: https://www.instagram.com/{searchResponse.User.Name}/");
+
+        if (requested.HasFlag(Parameters.Location) && searchResponse.Location?.Name != null)
+            sb.AppendLine($"Location: {searchResponse.Location.Name}");
+
+        if (requested.HasFlag(Parameters.Music) && searchResponse.Metadata?.MusicInfo.Asset != null)
+        {
+            var asset = searchResponse.Metadata.MusicInfo.Asset;
+            sb.AppendLine($"Music: {asset.Artist} - {asset.Title}");
+        }
+
+        return sb.ToString().TrimEnd();
     }
 }

@@ -10,7 +10,13 @@ public record SearchResponse(
     [property: JsonPropertyName("video_versions")]
     List<Item>? Video,
     [property: JsonPropertyName("image_versions2")]
-    Image? Image
+    Image? Image,
+    [property: JsonPropertyName("user")]
+    User? User,
+    [property: JsonPropertyName("clips_metadata")]
+    Metadata? Metadata,
+    [property: JsonPropertyName("location")]
+    Location? Location
 );
 
 public record Carousel(
@@ -39,4 +45,31 @@ public record Item(
 public record Caption(
     [property: JsonPropertyName("text")]
     string Text
+);
+
+public record User(
+    [property: JsonPropertyName("username")]
+    string Name
+);
+
+public record Metadata(
+    [property: JsonPropertyName("music_info")]
+    MusicInfo MusicInfo
+);
+
+public record MusicInfo(
+    [property: JsonPropertyName("music_asset_info")]
+    MusicAsset Asset
+);
+
+public record MusicAsset(
+    [property: JsonPropertyName("display_artist")]
+    string Artist,
+    [property: JsonPropertyName("title")]
+    string Title
+);
+
+public record Location(
+    [property: JsonPropertyName("name")]
+    string Name
 );

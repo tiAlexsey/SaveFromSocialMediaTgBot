@@ -6,9 +6,9 @@ namespace SaveFromSocialMediaTgBot.Services;
 
 public class ScraperService(IEnumerable<IScraper> scrapers)
 {
-    public async Task<ScraperResponse> GetSourceStreamAsync(string url, CancellationToken ct)
+    public async Task<ScraperResponse> GetSourceStreamAsync(ScrapedRequest request, CancellationToken ct)
     {
-        var scrapper = scrapers.FirstOrDefault(x => x.CanHandle(url)) ?? throw new InvalidUrlException();
-        return await scrapper.GetSourceStreamAsync(url, ct);
+        var scrapper = scrapers.FirstOrDefault(x => x.CanHandle(request.Link)) ?? throw new InvalidUrlException();
+        return await scrapper.GetSourceStreamAsync(request, ct);
     }
 }

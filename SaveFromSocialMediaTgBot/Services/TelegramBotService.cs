@@ -184,7 +184,8 @@ public class TelegramBotService(
         await client.SetMessageReaction(message.ChatId, message.Id, ["\ud83d\udc40"],
             cancellationToken: ct);
 
-        var scraperResponse = await scraperService.GetSourceStreamAsync(message.VideoLink!, ct);
+        var request = new ScrapedRequest(message.Link!, message.Parameters); 
+        var scraperResponse = await scraperService.GetSourceStreamAsync(request, ct);
         var media = scraperResponse.ToInputMedia();
 
         switch (media)
@@ -195,7 +196,7 @@ public class TelegramBotService(
                     await client.SendMediaGroup(
                         chatId: message.ChatId,
                         media: mediaChunk,
-                        messageThreadId: message.TreadId,
+                        messageThreadId: message.ThreadId,
                         disableNotification: message.Settings.Notification,
                         cancellationToken: ct);
                 }
@@ -205,7 +206,7 @@ public class TelegramBotService(
                 await client.SendMediaGroup(
                     chatId: message.ChatId,
                     media: media,
-                    messageThreadId: message.TreadId,
+                    messageThreadId: message.ThreadId,
                     disableNotification: message.Settings.Notification,
                     cancellationToken: ct);
                 break;
