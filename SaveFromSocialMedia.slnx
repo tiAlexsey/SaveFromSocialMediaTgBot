@@ -1,0 +1,12 @@
+﻿<Solution>
+	<Folder Name="/Application/">
+		<Project Path="Application\TelegramBot\TelegramBot.csproj" />
+	</Folder>
+	<Folder Name="/Solution Items/">
+		<File Path=".github\workflows\main.yml" />
+		<File Path=".gitignore" />
+		<File Path="README.md" />
+	</Folder>
+	<Project Path="Abstract/Abstract.csproj" />
+	<Project Path="Services/Services.csproj" />
+</Solution>

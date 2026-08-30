@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
+    <PackageReference Include="Telegram.Bot" Version="22.10.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstract\Abstract.csproj" />
+    <ProjectReference Include="..\..\Services\Services.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\.dockerignore">
+      <Link>.dockerignore</Link>
+    </Content>
+    <Content Include=".github\Workflows\main.yml" />
+    <Content Remove=".github\Workflows\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove=".github\Workflows\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Remove=".github\Workflows\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove=".github\Workflows\**" />
+    <None Remove="login.png" />
+  </ItemGroup>
+</Project>
