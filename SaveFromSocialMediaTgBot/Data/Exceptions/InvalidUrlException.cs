@@ -1,4 +1,4 @@
-namespace SaveFromSocialMediaTgBot.Exceptions;
+namespace SaveFromSocialMediaTgBot.Data.Exceptions;
 
 /// <summary>
 /// The exception that is thrown when a url is invalid or not supported.

@@ -7,7 +7,7 @@ using SaveFromSocialMediaTgBot.Services;
 using SaveFromSocialMediaTgBot.Services.Scraper;
 using Serilog;
 
-namespace SaveFromSocialMediaTgBot.Extensions;
+namespace SaveFromSocialMediaTgBot.Data.Extensions;
 
 public static class AppBuilderExtension
 {

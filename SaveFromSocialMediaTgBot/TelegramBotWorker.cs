@@ -1,4 +1,4 @@
-using SaveFromSocialMediaTgBot.Exceptions;
+using SaveFromSocialMediaTgBot.Data.Exceptions;
 using SaveFromSocialMediaTgBot.Interfaces;
 using SaveFromSocialMediaTgBot.Logging;
 using Telegram.Bot;

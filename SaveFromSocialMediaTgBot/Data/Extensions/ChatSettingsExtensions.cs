@@ -2,7 +2,7 @@ using SaveFromSocialMediaTgBot.Data.Constants;
 using SaveFromSocialMediaTgBot.Data.Models;
 using Telegram.Bot.Types.ReplyMarkups;
 
-namespace SaveFromSocialMediaTgBot.Extensions;
+namespace SaveFromSocialMediaTgBot.Data.Extensions;
 
 public static class ChatSettingsExtensions
 {

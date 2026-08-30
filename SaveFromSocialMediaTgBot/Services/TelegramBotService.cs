@@ -1,6 +1,6 @@
 using SaveFromSocialMediaTgBot.Data.Constants;
+using SaveFromSocialMediaTgBot.Data.Extensions;
 using SaveFromSocialMediaTgBot.Data.Models;
-using SaveFromSocialMediaTgBot.Extensions;
 using SaveFromSocialMediaTgBot.Interfaces;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -13,6 +13,9 @@ public class TelegramBotService(
     ICacheService cacheService,
     ITelegramBotClient client) : ITelegramBotService
 {
+    private const int MaxCaptionLength = 1024;
+    private const int MaxMessageLength = 4000;
+
     public async Task UpdateWorkflowAsync(Update update, CancellationToken ct)
     {
         var chatSettings = await cacheService.GetOrCreateAsync(update.Message!.Chat.Id.ToString(),
@@ -184,9 +187,14 @@ public class TelegramBotService(
         await client.SetMessageReaction(message.ChatId, message.Id, ["\ud83d\udc40"],
             cancellationToken: ct);
 
-        var request = new ScrapedRequest(message.Link!, message.Parameters); 
+        var request = new ScrapedRequest(message.Link!, message.Parameters);
         var scraperResponse = await scraperService.GetSourceStreamAsync(request, ct);
-        var media = scraperResponse.ToInputMedia();
+        var text = scraperResponse.Results?.FirstOrDefault()?.Text;
+        var caption = text?.Length <= MaxCaptionLength ? text : null;
+        var textParts = caption is null
+            ? SplitTextByParagraphs(text, MaxMessageLength)
+            : [];
+        var media = scraperResponse.ToInputMedia(caption);
 
         switch (media)
         {
@@ -212,10 +220,62 @@ public class TelegramBotService(
                 break;
         }
 
+        foreach (var textPart in textParts)
+        {
+            await client.SendMessage(
+                chatId: message.ChatId,
+                text: textPart,
+                messageThreadId: message.ThreadId,
+                disableNotification: message.Settings.Notification,
+                cancellationToken: ct);
+        }
+
         await client.SetMessageReaction(message.ChatId, message.Id, ["\ud83d\udcaf"],
             cancellationToken: ct);
 
         if (message.Settings.DeleteOriginMessage)
             await client.DeleteMessage(message.ChatId, message.Id, ct);
+    }
+
+    private static IReadOnlyList<string> SplitTextByParagraphs(string? text, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return [];
+
+        var paragraphs = text.Replace("\r\n", "\n").Split("\n\n");
+        var chunks = new List<string>();
+        var current = string.Empty;
+
+        foreach (var paragraph in paragraphs)
+        {
+            var candidate = current.Length == 0 ? paragraph : $"{current}\n\n{paragraph}";
+            if (candidate.Length <= maxLength)
+            {
+                current = candidate;
+                continue;
+            }
+
+            if (current.Length > 0)
+            {
+                chunks.Add(current);
+                current = string.Empty;
+            }
+
+            for (var start = 0; start < paragraph.Length; start += maxLength)
+            {
+                var length = Math.Min(maxLength, paragraph.Length - start);
+                if (start + length == paragraph.Length)
+                    current = paragraph.Substring(start, length);
+                else
+                {
+                    chunks.Add(paragraph.Substring(start, length));
+                }
+            }
+        }
+
+        if (current.Length > 0)
+            chunks.Add(current);
+
+        return chunks;
     }
 }

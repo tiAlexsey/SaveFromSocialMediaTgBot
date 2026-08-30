@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
 
-namespace SaveFromSocialMediaTgBot.Extensions;
+namespace SaveFromSocialMediaTgBot.Data.Extensions;
 
 internal static class JsonCorrection
 {

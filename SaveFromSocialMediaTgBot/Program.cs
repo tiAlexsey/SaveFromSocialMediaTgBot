@@ -1,6 +1,6 @@
 using SaveFromSocialMediaTgBot;
 using SaveFromSocialMediaTgBot.Data.Constants;
-using SaveFromSocialMediaTgBot.Extensions;
+using SaveFromSocialMediaTgBot.Data.Extensions;
 using SaveFromSocialMediaTgBot.Interfaces;
 using SaveFromSocialMediaTgBot.Services;
 using Telegram.Bot;

@@ -1,11 +1,11 @@
 using SaveFromSocialMediaTgBot.Data.Models;
 using Telegram.Bot.Types;
 
-namespace SaveFromSocialMediaTgBot.Extensions;
+namespace SaveFromSocialMediaTgBot.Data.Extensions;
 
 public static class ScraperResponseExtensions
 {
-    public static List<IAlbumInputMedia> ToInputMedia(this ScraperResponse? streams)
+    public static List<IAlbumInputMedia> ToInputMedia(this ScraperResponse? streams, string? caption = null)
     {
         if (streams?.Results is null)
             return [];
@@ -20,14 +20,14 @@ public static class ScraperResponseExtensions
                     var video = new InputMediaVideo(
                         InputFile.FromStream(scraperResult.Stream, $"file__{Guid.NewGuid():N}.mp4"));
                     if (i == 0)
-                        video.Caption = scraperResult.Text;
+                        video.Caption = caption;
                     result.Add(video);
                     break;
                 case { MediaType: MediaType.Photo }:
                     var photo = new InputMediaPhoto(
                         InputFile.FromStream(scraperResult.Stream, $"file__{Guid.NewGuid():N}.png"));
                     if (i == 0)
-                        photo.Caption = scraperResult.Text;
+                        photo.Caption = caption;
                     result.Add(photo);
                     break;
             }

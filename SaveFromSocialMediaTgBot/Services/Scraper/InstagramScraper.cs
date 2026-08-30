@@ -9,7 +9,7 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Web;
 using PuppeteerSharp.Input;
-using SaveFromSocialMediaTgBot.Extensions;
+using SaveFromSocialMediaTgBot.Data.Extensions;
 
 namespace SaveFromSocialMediaTgBot.Services.Scraper;
 
@@ -149,7 +149,8 @@ public class InstagramScraper(
                     ? search.Video.MaxBy(x => x.Height)?.Url
                     : search.Photos?.Items?.MaxBy(x => x.Height)?.Url;
 
-                if (mediaUrl == null) continue;
+                if (mediaUrl == null)
+                    continue;
 
                 var result = await DownloadMediaAsync(mediaUrl, mediaType);
                 result.Text = MapParams(request, searchResponse);
