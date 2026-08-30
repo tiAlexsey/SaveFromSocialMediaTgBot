@@ -9,6 +9,7 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Web;
 using PuppeteerSharp.Input;
+using SaveFromSocialMediaTgBot.Extensions;
 
 namespace SaveFromSocialMediaTgBot.Services.Scraper;
 
@@ -107,7 +108,9 @@ public class InstagramScraper(
         if (!match.Success)
             return null;
 
-        var reelJson = FixInstagramJson(match.Value).Replace("\r", "\\r").Replace("\n", "\\n");
+        if (!JsonCorrection.TryCorrectJson(match.Value, out var reelJson))
+            return null;
+
         var reel = JsonSerializer.Deserialize<SearchResponse>(reelJson, options);
 
         if (reel?.Video == null)
@@ -127,7 +130,8 @@ public class InstagramScraper(
             return null;
 
         var postJson = match.Groups["json"].Value;
-        postJson = FixInstagramJson(postJson).Replace("\r", "\\r").Replace("\n", "\\n");
+        if (!JsonCorrection.TryCorrectJson(postJson, out postJson))
+            return null;
 
         var searchResponse = JsonSerializer.Deserialize<List<SearchResponse>>(postJson, options)?
             .FirstOrDefault();
@@ -223,38 +227,6 @@ public class InstagramScraper(
         var unescaped = Regex.Unescape(rawContent);
         var fullyDecoded = HttpUtility.HtmlDecode(unescaped);
         return fullyDecoded.Replace("\\/", "/");
-    }
-
-    private static string FixInstagramJson(string rawJson)
-    {
-        var span = rawJson.AsSpan();
-        var targetKey = "\"video_dash_manifest\"";
-        var keyIndex = span.IndexOf(targetKey);
-
-        if (keyIndex == -1)
-            return rawJson;
-
-        var xmlEndTag = "</MPD>";
-        var endTagIndex = span[keyIndex..].IndexOf(xmlEndTag);
-
-        if (endTagIndex == -1)
-            return rawJson;
-
-        var absoluteEndTagIndex = keyIndex + endTagIndex + xmlEndTag.Length;
-        var remainingSpan = span[absoluteEndTagIndex..];
-
-        var closeQuoteIndex = remainingSpan.IndexOf('"');
-        if (closeQuoteIndex == -1)
-            return rawJson;
-
-        var propertyEndIndex = absoluteEndTagIndex + closeQuoteIndex + 1;
-
-        if (propertyEndIndex < span.Length && span[propertyEndIndex] == ',')
-        {
-            propertyEndIndex++;
-        }
-
-        return string.Concat(span[..keyIndex], span[propertyEndIndex..]);
     }
 
     private async Task<ScraperResult> DownloadMediaAsync(string? url, MediaType type)
